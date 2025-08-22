@@ -7,6 +7,7 @@ const cors = require("cors");
 const app = express();
 
 const db = require("./models");
+const v1routes = require("./routes/v1");
 
 // ===== CORS =====
 const allowedOrigins = ["http://localhost:5173"];
@@ -26,9 +27,13 @@ app.use(
 );
 app.use(express.json());
 
+// ===== ROUTES =====
+app.use("/api/v1", v1routes);
+
 app.get('/', (req, res) => {
     res.send('Endpoint API Travelin');
 });
+
 
 
 const PORT = process.env.PORT || 3000;
