@@ -1,13 +1,13 @@
 require("dotenv").config({
     path: process.env.ENV_FILE || ".env",
 });
-
+require('module-alias/register');
 const express = require("express");
 const cors = require("cors");
 const app = express();
 
-const db = require("./models");
-const v1routes = require("./routes/v1");
+const db = require("@models");
+const v1routes = require("@routes/v1");
 
 // ===== CORS =====
 const allowedOrigins = ["http://localhost:5173"];

@@ -1,9 +1,10 @@
-module.exports = (Sequelize, DataTypes) => {
+module.exports = (sequelize, DataTypes) => {
     const UserToken = sequelize.define('UserToken', {
         token: {
             type: DataTypes.STRING,
             allowNull: false,
             unique: true,
+            primaryKey: true
         },
         type: {
             type: DataTypes.ENUM("signup", "reset_password"),
@@ -15,7 +16,7 @@ module.exports = (Sequelize, DataTypes) => {
         }
     }, {
         tableName: "user_tokens",
-        timestamps: true,
+        timestamps: false,
         id: false
     });
 
