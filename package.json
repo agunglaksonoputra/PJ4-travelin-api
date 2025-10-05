@@ -45,7 +45,7 @@
     "@services": "services",
     "@controllers": "controllers",
     "@routes": "routes",
-    "middlewares": "middlewares",
+    "@middlewares": "middlewares",
     "@utils": "utils"
   }
 }

@@ -119,7 +119,7 @@ exports.login = async ({ username, password }) => {
     const payload = {
         id: user.id,
         username: user.username,
-        role_id: user.role_id,
+        // role_id: user.role_id,
         role: user.role.name,
     };
 
@@ -127,7 +127,6 @@ exports.login = async ({ username, password }) => {
     const token = signToken(payload);
 
     return {
-        message: "Login berhasil",
         token,
         user: payload,
     };
@@ -176,7 +175,6 @@ exports.resetPassword = async ({ username, newPassword, token }) => {
     await existingToken.destroy();
 
     return {
-        message: "Password berhasil direset. Silakan login dengan password baru",
         username: user.username,
     };
 };

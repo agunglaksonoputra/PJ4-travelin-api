@@ -20,6 +20,28 @@ module.exports = (sequelize, DataTypes) => {
             action: {
                 type: DataTypes.ENUM('create', 'update', 'delete'),
             },
+            field_name: {
+                type: DataTypes.STRING,
+                allowNull: false,
+            },
+            value_before: {
+                type: DataTypes.DECIMAL,
+                allowNull: false,
+            },
+            value_after: {
+                type: DataTypes.DECIMAL,
+                allowNull: false,
+            },
+            createdBy: {
+                type: DataTypes.INTEGER,
+                allowNull: false,
+                references: {
+                    model: "users",
+                    key: "id",
+                },
+                onUpdate: "CASCADE",
+                onDelete: "RESTRICT",
+            },
         },
         {
             tableName: "transaction_logs",

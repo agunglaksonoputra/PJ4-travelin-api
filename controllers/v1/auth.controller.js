@@ -37,7 +37,7 @@ exports.signup = async (req, res, next) => {
         res.status(201).json({
             success: true,
             message: "Signup berhasil",
-            user: newUser,
+            data: newUser,
         });
     } catch (err) {
         res.status(err.status).json({ success: false, error: err.message });
@@ -52,7 +52,8 @@ exports.login = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            ...result,
+            message: "Login berhasil",
+            data: result,
         });
     } catch (err) {
         res.status(err.status).json({ success: false, error: err.message });
@@ -65,7 +66,11 @@ exports.resetPassword = async (req, res) => {
 
         const result = await authService.resetPassword({ username, newPassword, token });
 
-        res.json({ success: true, result });
+        res.json({
+            success: true,
+            message: "Password berhasil direset. Silakan login dengan password baru",
+            data: result
+        });
     } catch (err) {
         res.status(err.status).json({ success: false, error: err.message });
     }

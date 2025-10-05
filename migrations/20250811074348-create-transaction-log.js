@@ -22,6 +22,16 @@ module.exports = {
           action: {
               type: Sequelize.ENUM('create', 'update', 'delete'),
           },
+          createdBy: {
+              type: Sequelize.INTEGER,
+              allowNull: false,
+              references: {
+                  model: "users",
+                  key: "id",
+              },
+              onUpdate: "CASCADE",
+              onDelete: "RESTRICT",
+          },
           createdAt: {
               allowNull: false,
               type: Sequelize.DATE,
