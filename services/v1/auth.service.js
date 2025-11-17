@@ -1,6 +1,6 @@
 const { Op } = require("sequelize");
 const createError = require("http-errors");
-const { User, UserToken, Role } = require('@models');
+const { User, UserToken } = require('@models');
 const {randomHex} = require("@utils/cryptoUtil");
 const {hashPassword, comparePassword} = require("@utils/hashPassword");
 const {signToken} = require("@utils/jwtUtil");
@@ -106,10 +106,11 @@ exports.login = async ({ username, password }) => {
         throw createError(400, "Username dan password wajib diisi");
     }
 
-    const user = await User.findOne({
-        where: { username },
-        include: [{ model: Role, as: "role", attributes: ["id", "name"] }],
-    });
+    const user = await User.findOne({ where: { username } });
+
+    if (!user) {
+        throw createError(401, "Username atau password salah");
+    }
 
     const isMatch = await comparePassword(password, user.password);
     if (!isMatch) {
@@ -119,8 +120,7 @@ exports.login = async ({ username, password }) => {
     const payload = {
         id: user.id,
         username: user.username,
-        // role_id: user.role_id,
-        role: user.role.name,
+    role: user.role,
     };
 
     // const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });

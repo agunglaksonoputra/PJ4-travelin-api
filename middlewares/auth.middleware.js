@@ -24,9 +24,10 @@ module.exports.protectRoute = (req, res, next) => {
 };
 
 module.exports.authorizeRole = (roles = []) => {
-    return (req, res, next) => {
+    const allowedRoles = Array.isArray(roles) ? roles : [roles];
 
-        if (!roles.includes(req.user.role)) {
+    return (req, res, next) => {
+        if (!allowedRoles.includes(req.user.role)) {
             return next(createError(403, "Forbidden: Access denied"));
         }
 
