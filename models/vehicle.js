@@ -1,36 +1,31 @@
 module.exports = (sequelize, DataTypes) => {
-    const Vehicle = sequelize.define(
-        "Vehicle",
-        {
-            id: {
-                type: DataTypes.INTEGER,
-                primaryKey: true,
-                autoIncrement: true,
-            },
-            plate_number: {
-                type: DataTypes.STRING(20),
-                allowNull: false,
-            },
-            type: {
-                type: DataTypes.STRING(50),
-                allowNull: false,
-            },
-            capacity: {
-              type: DataTypes.INTEGER,
-              allowNull: false,
-            },
-            status: {
-                type: DataTypes.ENUM('available', 'rented', 'off'),
-                defaultValue: 'available',
-                allowNull: false,
-            },
-        },
-        {
-            tableName: "vehicles",
-            timestamps: true,
-            paranoid: true,
-        }
-    );
+  const Vehicle = sequelize.define(
+    'Vehicle',
+    {
+      id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
+      plate_number: { type: DataTypes.STRING(32), allowNull: false, unique: true },
+      brand: { type: DataTypes.STRING(100) },
+      model: { type: DataTypes.STRING(100) },
+      manufacture_year: { type: DataTypes.SMALLINT },
+      status: {
+        type: DataTypes.ENUM({ name: 'vehicle_status', values: ['active', 'maintenance', 'retired'] }),
+        allowNull: false,
+        defaultValue: 'active',
+      },
+      notes: { type: DataTypes.TEXT },
+    },
+    {
+      tableName: 'vehicles',
+      freezeTableName: true,
+      timestamps: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+    }
+  );
 
-    return Vehicle;
+  Vehicle.associate = (models) => {
+    Vehicle.hasMany(models.Transaction, { foreignKey: 'vehicle_id', as: 'transactions' });
+  };
+
+  return Vehicle;
 };
