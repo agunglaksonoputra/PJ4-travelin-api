@@ -12,7 +12,8 @@ exports.generateToken = async (req, res, next) => {
             data: result,
         });
     } catch (err) {
-        res.status(err.status).json({ success: false, error: err.message });
+        const status = err.status || err.statusCode || 500;
+        res.status(status).json({ success: false, error: err.message || "Terjadi kesalahan" });
     }
 };
 
@@ -24,7 +25,8 @@ exports.getAllTokens = async (req, res) => {
             data: result,
         })
     } catch (err) {
-        res.status(err.status).json({ message: err.message });
+        const status = err.status || err.statusCode || 500;
+        res.status(status).json({ message: err.message || "Terjadi kesalahan" });
     }
 }
 
@@ -40,7 +42,8 @@ exports.signup = async (req, res, next) => {
             data: newUser,
         });
     } catch (err) {
-        res.status(err.status).json({ success: false, error: err.message });
+        const status = err.status || err.statusCode || 500;
+        res.status(status).json({ success: false, error: err.message || "Terjadi kesalahan" });
     }
 };
 
@@ -56,7 +59,8 @@ exports.login = async (req, res) => {
             data: result,
         });
     } catch (err) {
-        res.status(err.status).json({ success: false, error: err.message });
+        const status = err.status || err.statusCode || 500;
+        res.status(status).json({ success: false, error: err.message || "Terjadi kesalahan" });
     }
 };
 
@@ -72,6 +76,7 @@ exports.resetPassword = async (req, res) => {
             data: result
         });
     } catch (err) {
-        res.status(err.status).json({ success: false, error: err.message });
+        const status = err.status || err.statusCode || 500;
+        res.status(status).json({ success: false, error: err.message || "Terjadi kesalahan" });
     }
 }
