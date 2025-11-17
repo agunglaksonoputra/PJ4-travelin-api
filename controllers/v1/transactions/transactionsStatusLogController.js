@@ -1,6 +1,25 @@
 const transactionStatusLogService = require('@services/v1/transactions/transactionsStatusLogsServices');
 
-const getStatusCode = (error) => error.status || error.statusCode || 500;
+const buildCreatePayload = (body, actorUserId) => {
+	const transactionId = body.transactionId ?? body.transaction_id;
+	const fromStatus = body.fromStatus ?? body.from_status ?? null;
+	const toStatus = body.toStatus ?? body.to_status;
+	const changedAt = body.changedAt ?? body.changed_at;
+
+	return {
+		transactionId,
+		fromStatus,
+		toStatus,
+		note: body.note ?? null,
+		changedAt,
+		actorUserId,
+	};
+};
+
+const sendErrorResponse = (res, err) => {
+	const statusCode = err?.status || err?.statusCode || 500;
+	res.status(statusCode).json({ success: false, error: err?.message || 'Terjadi kesalahan' });
+};
 
 const parseBoolean = (value) => {
 	if (value === undefined) return undefined;
@@ -28,8 +47,7 @@ exports.listTransactionStatusLogs = async (req, res) => {
 
 		res.status(200).json({ success: true, data: logs });
 	} catch (err) {
-		const statusCode = getStatusCode(err);
-		res.status(statusCode).json({ success: false, error: err.message || 'Terjadi kesalahan' });
+		sendErrorResponse(res, err);
 	}
 };
 
@@ -46,22 +64,18 @@ exports.getTransactionStatusLog = async (req, res) => {
 
 		res.status(200).json({ success: true, data: log });
 	} catch (err) {
-		const statusCode = getStatusCode(err);
-		res.status(statusCode).json({ success: false, error: err.message || 'Terjadi kesalahan' });
+		sendErrorResponse(res, err);
 	}
 };
 
 exports.createTransactionStatusLog = async (req, res) => {
 	try {
 		const actorUserId = req.user?.id || null;
-		const log = await transactionStatusLogService.createTransactionStatusLog({
-			...req.body,
-			actorUserId,
-		});
+		const payload = buildCreatePayload(req.body ?? {}, actorUserId);
+		const log = await transactionStatusLogService.createTransactionStatusLog(payload);
 
 		res.status(201).json({ success: true, message: 'Transaction status log created', data: log });
 	} catch (err) {
-		const statusCode = getStatusCode(err);
-		res.status(statusCode).json({ success: false, error: err.message || 'Terjadi kesalahan' });
+		sendErrorResponse(res, err);
 	}
 };
