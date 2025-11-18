@@ -510,6 +510,7 @@
 									"const json = pm.response.json();",
 									"pm.expect(json.success).to.be.true;",
 									"pm.expect(json.data).to.have.property('id');",
+									"pm.expect(Number(json.data.shares_percentage)).to.eql(40);",
 									"pm.environment.set('ownerId', json.data.id);"
 								],
 								"type": "text/javascript"
@@ -530,7 +531,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"{{ownerName}}\",\n  \"phone\": \"+628112223334\",\n  \"notes\": \"Automation owner\"\n}"
+							"raw": "{\n  \"name\": \"{{ownerName}}\",\n  \"phone\": \"+628112223334\",\n  \"shares_percentage\": 40,\n  \"notes\": \"Automation owner\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/owners",
@@ -590,7 +591,9 @@
 								"exec": [
 									"pm.test('Status 200', function () {",
 									"  pm.response.to.have.status(200);",
-									"});"
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(Number(json.data.shares_percentage)).to.eql(42.5);"
 								],
 								"type": "text/javascript"
 							}
@@ -610,7 +613,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"notes\": \"Automation owner updated\"\n}"
+							"raw": "{\n  \"notes\": \"Automation owner updated\",\n  \"shares_percentage\": 42.5\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/owners/{{ownerId}}",
@@ -724,6 +727,7 @@
 									"const json = pm.response.json();",
 									"pm.expect(json.success).to.be.true;",
 									"pm.expect(json.data).to.have.property('id');",
+									"pm.expect(Number(json.data.shares_percentage)).to.eql(35);",
 									"pm.environment.set('ownerId', json.data.id);"
 								],
 								"type": "text/javascript"
@@ -744,7 +748,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"{{ownerName}}\",\n  \"phone\": \"+628112223334\",\n  \"notes\": \"Automation owner\"\n}"
+							"raw": "{\n  \"name\": \"{{ownerName}}\",\n  \"phone\": \"+628112223334\",\n  \"shares_percentage\": 35,\n  \"notes\": \"Automation owner\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/owners",
@@ -1154,6 +1158,84 @@
 								"value": "Bearer {{authToken}}"
 							}
 						],
+						"url": {
+							"raw": "{{baseUrl}}/transactions/{{transactionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"transactions",
+								"{{transactionId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Transactions • Close (assert profit shares)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const authHeader = { key: 'Authorization', value: 'Bearer ' + pm.environment.get('authToken') };",
+									"const baseUrl = pm.environment.get('baseUrl');",
+									"const txId = pm.environment.get('transactionId');",
+									"const ownerId = pm.environment.get('ownerId');",
+									"pm.expect(txId, 'transactionId set').to.exist;",
+									"pm.expect(ownerId, 'ownerId set').to.exist;",
+									"// 1) Get transaction detail for total_cost",
+									"pm.sendRequest({ url: baseUrl + '/transactions/' + txId, method: 'GET', header: [authHeader] }, function (err1, res1) {",
+									"  pm.expect(err1, 'no error on tx fetch').to.be.null;",
+									"  pm.expect(res1).to.have.property('code', 200);",
+									"  const tx = res1.json().data;",
+									"  const totalCost = Number(tx.total_cost || 0);",
+									"  // 2) Get owner detail for shares_percentage",
+									"  pm.sendRequest({ url: baseUrl + '/owners/' + ownerId, method: 'GET', header: [authHeader] }, function (err2, res2) {",
+									"    pm.expect(err2, 'no error on owner fetch').to.be.null;",
+									"    pm.expect(res2).to.have.property('code', 200);",
+									"    const owner = res2.json().data;",
+									"    const shares = Number(owner.shares_percentage || 0);",
+									"    // 3) List profit shares for transaction",
+									"    pm.sendRequest({ url: baseUrl + '/profit-shares?transaction_id=' + txId, method: 'GET', header: [authHeader] }, function (err3, res3) {",
+									"      pm.expect(err3, 'no error on profit shares fetch').to.be.null;",
+									"      pm.expect(res3).to.have.property('code', 200);",
+									"      const rows = res3.json().data || [];",
+									"      pm.expect(Array.isArray(rows), 'rows is array').to.be.true;",
+									"      const found = rows.find(r => Number(r.owner_id) === Number(ownerId));",
+									"      pm.expect(found, 'profit share for owner exists').to.exist;",
+									"      const expected = Math.round((totalCost * (shares / 100)) * 100) / 100;",
+									"      const actual = Number(found.share_amount);",
+									"      pm.test('Share amount matches expected', function () {",
+									"        pm.expect(actual).to.eql(expected);",
+									"      });",
+									"    });",
+									"  });",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"closed\",\n  \"notes\": \"Auto close for profit share test\"\n}"
+						},
 						"url": {
 							"raw": "{{baseUrl}}/transactions/{{transactionId}}",
 							"host": [
