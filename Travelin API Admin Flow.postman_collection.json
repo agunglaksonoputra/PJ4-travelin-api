@@ -1375,6 +1375,700 @@
 			]
 		},
 		{
+			"name": "Transaction Payments",
+			"item": [
+				{
+					"name": "Payments • Create",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 201', function () {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(json.success).to.be.true;",
+									"pm.expect(json.data).to.have.property('id');",
+									"pm.environment.set('transactionPaymentId', json.data.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"transaction_id\": {{transactionId}},\n  \"amount\": 750000,\n  \"method\": \"transfer\",\n  \"note\": \"Automation payment\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/transactions/payments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"transactions",
+								"payments"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Payments • Detail",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(Number(json.data.id)).to.eql(Number(pm.environment.get('transactionPaymentId')));"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/transactions/payments/{{transactionPaymentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"transactions",
+								"payments",
+								"{{transactionPaymentId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Payments • Update",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(Number(json.data.amount)).to.eql(800000);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 800000,\n  \"note\": \"Automation payment updated\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/transactions/payments/{{transactionPaymentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"transactions",
+								"payments",
+								"{{transactionPaymentId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Payments • List",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const data = pm.response.json().data;",
+									"pm.expect(Array.isArray(data)).to.be.true;",
+									"if (data.length) {",
+									"  pm.environment.set('transactionPaymentId', data[0].id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/transactions/payments?transaction_id={{transactionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"transactions",
+								"payments"
+							],
+							"query": [
+								{
+									"key": "transaction_id",
+									"value": "{{transactionId}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Payments • Delete",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(json.success).to.be.true;"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/transactions/payments/{{transactionPaymentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"transactions",
+								"payments",
+								"{{transactionPaymentId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Transaction Refunds",
+			"item": [
+				{
+					"name": "Refunds • Create",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 201', function () {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(json.success).to.be.true;",
+									"pm.expect(json.data).to.have.property('id');",
+									"pm.environment.set('transactionRefundId', json.data.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"transaction_id\": {{transactionId}},\n  \"amount\": 150000,\n  \"reason\": \"Customer requested refund\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/transactions/refunds",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"transactions",
+								"refunds"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refunds • Detail",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(Number(json.data.id)).to.eql(Number(pm.environment.get('transactionRefundId')));"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/transactions/refunds/{{transactionRefundId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"transactions",
+								"refunds",
+								"{{transactionRefundId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refunds • Update",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.environment.set('refundProcessedAt', new Date().toISOString());"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(json.data.status).to.eql('approved');",
+									"pm.expect(Number(json.data.amount)).to.eql(155000);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"approved\",\n  \"processed_at\": \"{{refundProcessedAt}}\",\n  \"amount\": 155000\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/transactions/refunds/{{transactionRefundId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"transactions",
+								"refunds",
+								"{{transactionRefundId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refunds • List",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const data = pm.response.json().data;",
+									"pm.expect(Array.isArray(data)).to.be.true;",
+									"if (data.length) {",
+									"  pm.environment.set('transactionRefundId', data[0].id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/transactions/refunds?transaction_id={{transactionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"transactions",
+								"refunds"
+							],
+							"query": [
+								{
+									"key": "transaction_id",
+									"value": "{{transactionId}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refunds • Delete",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(json.success).to.be.true;"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/transactions/refunds/{{transactionRefundId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"transactions",
+								"refunds",
+								"{{transactionRefundId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Transaction Reports",
+			"item": [
+				{
+					"name": "Reports • Create",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.environment.set('transactionReportDate', new Date().toISOString().slice(0,10));"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 201', function () {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(json.success).to.be.true;",
+									"pm.expect(json.data).to.have.property('id');",
+									"pm.environment.set('transactionReportId', json.data.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"transaction_id\": {{transactionId}},\n  \"report_date\": \"{{transactionReportDate}}\",\n  \"driver_name\": \"Automation Driver\",\n  \"km_start\": 1200,\n  \"km_end\": 1350,\n  \"driver_fee\": 200000,\n  \"gasoline_cost\": 150000,\n  \"toll_cost\": 75000,\n  \"parking_cost\": 25000,\n  \"misc_cost\": 50000,\n  \"notes\": \"Automation report\",\n  \"total_operational_cost\": 500000\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/transactions/reports",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"transactions",
+								"reports"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reports • Detail",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(Number(json.data.id)).to.eql(Number(pm.environment.get('transactionReportId')));"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/transactions/reports/{{transactionReportId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"transactions",
+								"reports",
+								"{{transactionReportId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reports • Update",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(Number(json.data.total_operational_cost)).to.eql(425000);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"notes\": \"Automation report updated\",\n  \"total_operational_cost\": 425000\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/transactions/reports/{{transactionReportId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"transactions",
+								"reports",
+								"{{transactionReportId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reports • List",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const data = pm.response.json().data;",
+									"pm.expect(Array.isArray(data)).to.be.true;",
+									"if (data.length) {",
+									"  pm.environment.set('transactionReportId', data[0].id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/transactions/reports?transaction_id={{transactionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"transactions",
+								"reports"
+							],
+							"query": [
+								{
+									"key": "transaction_id",
+									"value": "{{transactionId}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reports • Delete",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(json.success).to.be.true;"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/transactions/reports/{{transactionReportId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"transactions",
+								"reports",
+								"{{transactionReportId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
 			"name": "Activity Logs",
 			"item": [
 				{
@@ -1506,6 +2200,18 @@
 		},
 		{
 			"key": "transactionId",
+			"value": ""
+		},
+		{
+			"key": "transactionPaymentId",
+			"value": ""
+		},
+		{
+			"key": "transactionRefundId",
+			"value": ""
+		},
+		{
+			"key": "transactionReportId",
 			"value": ""
 		},
 		{
