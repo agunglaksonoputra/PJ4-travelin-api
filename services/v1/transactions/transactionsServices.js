@@ -1,5 +1,5 @@
 const createError = require('http-errors');
-const { Transaction, sequelize } = require('@models');
+const { Transaction, Owner, ProfitShare, sequelize } = require('@models');
 const { createActivityLog } = require('../activityLogs/activityLogsServices');
 const { createTransactionStatusLog } = require('./transactionsStatusLogsServices');
 
@@ -112,10 +112,78 @@ exports.updateTransaction = async ({ transactionId, data, actorUserId, transacti
 				actorUserId,
 				transaction,
 			});
+
+			// When status becomes 'closed', distribute profit to all owners
+			if (after.status === 'closed' && previousStatus !== 'closed') {
+				await distributeProfitSharesToOwners({ transactionRecord: record, actorUserId, transaction });
+			}
 		}
 
 		return record;
 	});
+};
+
+// Helper: distribute profit shares to all owners based on shares_percentage
+const round2 = (n) => Number((Math.round(Number(n) * 100) / 100).toFixed(2));
+
+const distributeProfitSharesToOwners = async ({ transactionRecord, actorUserId, transaction }) => {
+	const total = Number(transactionRecord.total_cost || 0);
+	if (!Number.isFinite(total) || total <= 0) {
+		return; // Nothing to distribute
+	}
+
+	const owners = await Owner.findAll({ attributes: ['id', 'name', 'shares_percentage'], transaction });
+	if (!owners || owners.length === 0) return;
+
+	for (const owner of owners) {
+		const percentage = Number(owner.shares_percentage || 0);
+		if (!Number.isFinite(percentage) || percentage <= 0) continue;
+
+		const shareAmount = round2((percentage / 100) * total);
+
+		// Upsert by (transaction_id, owner_id)
+		const existing = await ProfitShare.findOne({
+			where: { transaction_id: transactionRecord.id, owner_id: owner.id },
+			transaction,
+		});
+
+		if (existing) {
+			const before = existing.toJSON();
+			await existing.update({ share_amount: shareAmount, calculated_at: new Date() }, { transaction });
+			const after = existing.toJSON();
+
+			await createActivityLog({
+				actorUserId,
+				entityType: 'profit_share',
+				entityId: existing.id,
+				action: 'update',
+				message: `Profit share updated for transaction ${transactionRecord.id} owner ${owner.id}`,
+				meta: { before, after },
+				transaction,
+			});
+		} else {
+			const created = await ProfitShare.create(
+				{
+					transaction_id: transactionRecord.id,
+					owner_id: owner.id,
+					share_amount: shareAmount,
+					calculated_at: new Date(),
+					note: 'Auto calculated on transaction closed',
+				},
+				{ transaction }
+			);
+
+			await createActivityLog({
+				actorUserId,
+				entityType: 'profit_share',
+				entityId: created.id,
+				action: 'create',
+				message: `Profit share created for transaction ${transactionRecord.id} owner ${owner.id}`,
+				meta: { transactionId: transactionRecord.id, ownerId: owner.id, shareAmount },
+				transaction,
+			});
+		}
+	}
 };
 
 exports.deleteTransaction = async ({ transactionId, actorUserId, transaction: outerTransaction }) => {

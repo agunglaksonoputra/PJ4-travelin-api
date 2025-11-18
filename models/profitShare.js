@@ -3,7 +3,7 @@ module.exports = (sequelize, DataTypes) => {
     'ProfitShare',
     {
       id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
-      transaction_id: { type: DataTypes.BIGINT, allowNull: false, unique: true },
+      transaction_id: { type: DataTypes.BIGINT, allowNull: false },
       owner_id: { type: DataTypes.BIGINT, allowNull: false },
       share_amount: { type: DataTypes.DECIMAL(14, 2), allowNull: false },
       calculated_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },

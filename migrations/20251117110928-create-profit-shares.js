@@ -14,7 +14,6 @@ module.exports = {
         transaction_id: {
           type: Sequelize.BIGINT,
           allowNull: false,
-          unique: true,
           references: {
             model: 'transactions',
             key: 'id',
@@ -46,6 +45,14 @@ module.exports = {
           allowNull: true,
         },
       }, { transaction: t });
+
+      // add composite unique (transaction_id, owner_id)
+      await queryInterface.addConstraint('profit_shares', {
+        fields: ['transaction_id', 'owner_id'],
+        type: 'unique',
+        name: 'profit_shares_transaction_owner_unique',
+        transaction: t,
+      });
     });
   },
 

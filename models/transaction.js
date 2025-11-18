@@ -43,7 +43,7 @@ module.exports = (sequelize, DataTypes) => {
     Transaction.hasMany(models.TransactionPayment, { foreignKey: 'transaction_id', as: 'payments' });
     Transaction.hasMany(models.TransactionRefund, { foreignKey: 'transaction_id', as: 'refunds' });
     Transaction.hasOne(models.TransactionReport, { foreignKey: 'transaction_id', as: 'report' });
-    Transaction.hasOne(models.ProfitShare, { foreignKey: 'transaction_id', as: 'profitShare' });
+    Transaction.hasMany(models.ProfitShare, { foreignKey: 'transaction_id', as: 'profitShares' });
     Transaction.hasMany(models.TransactionStatusLog, { foreignKey: 'transaction_id', as: 'statusLogs' });
   };
 
