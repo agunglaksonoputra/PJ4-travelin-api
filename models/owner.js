@@ -5,6 +5,7 @@ module.exports = (sequelize, DataTypes) => {
       id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
       name: { type: DataTypes.STRING(150), allowNull: false },
       phone: { type: DataTypes.STRING(30) },
+      shares_percentage: { type: DataTypes.DECIMAL(5, 2), allowNull: false, defaultValue: 0 },
       notes: { type: DataTypes.TEXT },
     },
     {

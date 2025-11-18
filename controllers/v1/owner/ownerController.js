@@ -5,10 +5,12 @@ const getStatusCode = (error) => error.status || error.statusCode || 500;
 exports.listOwners = async (req, res) => {
 	try {
 		const { name, phone } = req.query;
+		const sharesPercentage = req.query.shares_percentage;
 
 		const filters = {};
 		if (name) filters.name = name;
 		if (phone) filters.phone = phone;
+		if (sharesPercentage !== undefined) filters.shares_percentage = sharesPercentage;
 
 		const owners = await ownerService.listOwners({ filters });
 		res.status(200).json({ success: true, data: owners });

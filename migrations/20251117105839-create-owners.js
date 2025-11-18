@@ -19,6 +19,11 @@ module.exports = {
           type: Sequelize.STRING(30),
           allowNull: true,
         },
+        shares_percentage: {
+          type: Sequelize.DECIMAL(5, 2),
+          allowNull: false,
+          defaultValue: 0,
+        },
         notes: {
           type: Sequelize.TEXT,
           allowNull: true,
