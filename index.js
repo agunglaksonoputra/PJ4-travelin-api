@@ -8,6 +8,7 @@ const app = express();
 
 const db = require("@models");
 const v1routes = require("@routes/v1");
+const { generalRateLimiter } = require("@utils/rateLimiter");
 
 // ===== CORS =====
 const allowedOrigins = ["http://localhost:5173"];
@@ -28,7 +29,7 @@ app.use(
 app.use(express.json());
 
 // ===== ROUTES =====
-app.use("/api/v1", v1routes);
+app.use("/api/v1", generalRateLimiter, v1routes);
 
 app.get('/', (req, res) => {
     res.send('Endpoint API Travelin');
