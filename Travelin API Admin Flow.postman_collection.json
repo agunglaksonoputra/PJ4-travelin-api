@@ -54,6 +54,140 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Auth • Tokens • List",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+									"pm.test('Returns array of tokens', function () { const json = pm.response.json(); pm.expect(Array.isArray(json.data || json)).to.be.true; });"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Auth • Tokens • Generate",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status is 200 or 201', function () { pm.expect([200,201]).to.include(pm.response.code); });",
+									"pm.test('Contains token field', function () { const json = pm.response.json(); const data = json.data || json; pm.expect(data.token || data.accessToken || data.value).to.exist; });",
+									"try { const json = pm.response.json(); const data = json.data || json; if (data.id) { pm.collectionVariables.set('generatedTokenId', data.id.toString()); } } catch(e) {}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Auth • Signup",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// generate a unique username for signup",
+									"pm.environment.set('signupUsername', 'user_' + Date.now());",
+									"pm.environment.set('signupPassword', 'P@ssw0rd123');"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 201', function () {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(json.success, 'success flag').to.be.true;",
+									"pm.expect(json.data, 'data present').to.be.an('object');",
+									"pm.expect(json.data).to.have.property('id');",
+									"pm.expect(json.data).to.have.property('username');",
+									"pm.expect(json.data.username).to.eql(pm.environment.get('signupUsername'));"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{signupUsername}}\",\n  \"password\": \"{{signupPassword}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/signup",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"signup"
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
