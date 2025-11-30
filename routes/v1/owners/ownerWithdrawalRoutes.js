@@ -5,7 +5,7 @@ const ownerWithdrawalController = require('@controllers/v1/owner/ownerWithdrawal
 const { protectRoute, authorizeRole } = require('@middlewares/auth.middleware');
 
 router.use(protectRoute);
-router.use(authorizeRole(['admin']));
+router.use(authorizeRole(['owner']));
 
 router.get('/', ownerWithdrawalController.listOwnerWithdrawals);
 router.get('/:id', ownerWithdrawalController.getOwnerWithdrawal);
