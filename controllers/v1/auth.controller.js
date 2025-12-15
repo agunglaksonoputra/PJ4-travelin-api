@@ -1,82 +1,82 @@
 const authService = require("@services/v1/auth.service");
 
 exports.generateToken = async (req, res, next) => {
-    try {
-        const { type } = req.body;
+  try {
+    const { type } = req.body;
 
-        const result = await authService.generateToken({ type });
+    const result = await authService.generateToken({ type });
 
-        res.status(201).json({
-            success: true,
-            message: "Token berhasil dibuat",
-            data: result,
-        });
-    } catch (err) {
-        const status = err.status || err.statusCode || 500;
-        res.status(status).json({ success: false, error: err.message || "Terjadi kesalahan" });
-    }
+    res.status(201).json({
+      success: true,
+      message: "Token berhasil dibuat",
+      data: result,
+    });
+  } catch (err) {
+    const status = err.status || err.statusCode || 500;
+    res.status(status).json({ success: false, error: err.message || "Terjadi kesalahan" });
+  }
 };
 
 exports.getAllTokens = async (req, res) => {
-    try {
-        const result = await authService.getAllTokens();
-        res.status(200).json({
-            success: true,
-            data: result,
-        })
-    } catch (err) {
-        const status = err.status || err.statusCode || 500;
-        res.status(status).json({ message: err.message || "Terjadi kesalahan" });
-    }
-}
+  try {
+    const result = await authService.getAllTokens();
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (err) {
+    const status = err.status || err.statusCode || 500;
+    res.status(status).json({ message: err.message || "Terjadi kesalahan" });
+  }
+};
 
 exports.signup = async (req, res, next) => {
-    try {
-        const { username, password, token } = req.body;
+  try {
+    const { username, password, token } = req.body;
 
-        const newUser = await authService.signup({ username, password, token });
+    const newUser = await authService.signup({ username, password, token });
 
-        res.status(201).json({
-            success: true,
-            message: "Signup berhasil",
-            data: newUser,
-        });
-    } catch (err) {
-        const status = err.status || err.statusCode || 500;
-        res.status(status).json({ success: false, error: err.message || "Terjadi kesalahan" });
-    }
+    res.status(201).json({
+      success: true,
+      message: "Signup berhasil",
+      data: newUser,
+    });
+  } catch (err) {
+    const status = err.status || err.statusCode || 500;
+    res.status(status).json({ success: false, error: err.message || "Terjadi kesalahan" });
+  }
 };
 
 exports.login = async (req, res) => {
-    try {
-        const { username, password } = req.body;
+  try {
+    const { username, password } = req.body;
 
-        const result = await authService.login({ username, password });
+    const result = await authService.login({ username, password });
 
-        res.status(200).json({
-            success: true,
-            message: "Login berhasil",
-            data: result,
-        });
-    } catch (err) {
-        const status = err.status || err.statusCode || 500;
-        res.status(status).json({ success: false, error: err.message || "Terjadi kesalahan" });
-    }
+    res.status(200).json({
+      success: true,
+      message: "Login berhasil",
+      data: result,
+    });
+  } catch (err) {
+    const status = err.status || err.statusCode || 500;
+    res.status(status).json({ success: false, error: err.message || "Terjadi kesalahan" });
+  }
 };
 
 exports.resetPassword = async (req, res) => {
-    try {
-        const { username, newPassword, token } = req.body;
+  try {
+    const { username, newPassword, token } = req.body;
 
-        const result = await authService.resetPassword({ username, newPassword, token });
+    const result = await authService.resetPassword({ username, newPassword, token });
 
-        res.json({
-            success: true,
-            message: "Password berhasil direset. Silakan login dengan password baru",
-            data: result
-        });
-    } catch (err) {
-        const status = err.status || err.statusCode || 500;
-        res.status(status).json({ success: false, error: err.message || "Terjadi kesalahan" });
-    }
-}
+    res.json({
+      success: true,
+      message: "Password berhasil direset. Silakan login dengan password baru",
+      data: result,
+    });
+  } catch (err) {
+    const status = err.status || err.statusCode || 500;
+    res.status(status).json({ success: false, error: err.message || "Terjadi kesalahan" });
+  }
+};
