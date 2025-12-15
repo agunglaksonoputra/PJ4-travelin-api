@@ -10,6 +10,7 @@ router.use(authorizeRole(['admin']));
 router.get('/', transactionsController.listTransactions);
 router.get('/:id', transactionsController.getTransaction);
 router.post('/', transactionsController.createTransaction);
+router.post('/:id/payment-plan', transactionsController.setPaymentPlan);
 router.put('/:id', transactionsController.updateTransaction);
 router.delete('/:id', transactionsController.deleteTransaction);
 

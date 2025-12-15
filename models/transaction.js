@@ -23,6 +23,20 @@ module.exports = (sequelize, DataTypes) => {
       price_per_day: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
       duration_days: { type: DataTypes.INTEGER },
       total_cost: { type: DataTypes.DECIMAL(14, 2) },
+      payment_plan_method: {
+        type: DataTypes.ENUM({ name: 'transaction_payment_plan_method', values: ['cash', 'credit'] }),
+        allowNull: true,
+      },
+      paid_amount: {
+        type: DataTypes.DECIMAL(14, 2),
+        allowNull: false,
+        defaultValue: 0,
+      },
+      outstanding_amount: {
+        type: DataTypes.DECIMAL(14, 2),
+        allowNull: false,
+        defaultValue: 0,
+      },
       created_by: { type: DataTypes.BIGINT },
     },
     {
