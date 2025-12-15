@@ -65,6 +65,23 @@ exports.updateTransaction = async (req, res) => {
 	}
 };
 
+exports.setPaymentPlan = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const actorUserId = req.user?.id || null;
+		const transaction = await transactionService.setTransactionPaymentPlan({
+			transactionId: id,
+			data: req.body,
+			actorUserId,
+		});
+
+		res.status(200).json({ success: true, message: 'Payment plan updated', data: transaction });
+	} catch (err) {
+		const statusCode = getStatusCode(err);
+		res.status(statusCode).json({ success: false, error: err.message || 'Terjadi kesalahan' });
+	}
+};
+
 exports.deleteTransaction = async (req, res) => {
 	try {
 		const { id } = req.params;

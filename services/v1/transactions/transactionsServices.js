@@ -123,6 +123,88 @@ exports.updateTransaction = async ({ transactionId, data, actorUserId, transacti
 	});
 };
 
+exports.setTransactionPaymentPlan = async ({
+	transactionId,
+	data,
+	actorUserId,
+	transaction: outerTransaction,
+}) => {
+	const method = data?.payment_plan_method || data?.method;
+	if (!method) {
+		throw createError(400, 'payment_plan_method is required');
+	}
+
+	const normalizedMethod = String(method).toLowerCase();
+	if (!['cash', 'credit'].includes(normalizedMethod)) {
+		throw createError(400, 'payment_plan_method must be either cash or credit');
+	}
+
+	const toCurrency = (value) => {
+		if (value === undefined || value === null || value === '') {
+			return 0;
+		}
+		const numberValue = Number(value);
+		if (!Number.isFinite(numberValue)) {
+			throw createError(400, 'paid_amount must be a valid number');
+		}
+		if (numberValue < 0) {
+			throw createError(400, 'paid_amount cannot be negative');
+		}
+		return Math.round(numberValue * 100) / 100;
+	};
+
+	const paidAmount = toCurrency(data?.paid_amount ?? data?.amount ?? 0);
+
+	return runInTransaction(outerTransaction, async (transaction) => {
+		const record = await Transaction.findByPk(transactionId, { transaction });
+
+		if (!record) {
+			throw createError(404, 'Transaction not found');
+		}
+
+		const totalCost = toCurrency(record.total_cost ?? 0);
+		if (totalCost > 0 && paidAmount > totalCost) {
+			throw createError(400, 'paid_amount cannot exceed total_cost');
+		}
+
+		const outstandingRaw = totalCost - paidAmount;
+		const outstandingAmount = outstandingRaw > 0
+			? Math.round(outstandingRaw * 100) / 100
+			: 0;
+
+		const before = record.toJSON();
+		await record.update(
+			{
+				payment_plan_method: normalizedMethod,
+				paid_amount: paidAmount,
+				outstanding_amount: outstandingAmount,
+			},
+			{ transaction }
+		);
+		const after = record.toJSON();
+
+		await createActivityLog({
+			actorUserId,
+			entityType: ENTITY_TYPE,
+			entityId: record.id,
+			action: 'update',
+			message: `Payment plan updated for transaction ${record.trip_code}`,
+			meta: {
+				before,
+				after,
+				payload: {
+					payment_plan_method: normalizedMethod,
+					paid_amount: paidAmount,
+					outstanding_amount: outstandingAmount,
+				},
+			},
+			transaction,
+		});
+
+		return record;
+	});
+};
+
 // Helper: distribute profit shares to all owners based on shares_percentage
 const round2 = (n) => Number((Math.round(Number(n) * 100) / 100).toFixed(2));
 

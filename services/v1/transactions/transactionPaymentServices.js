@@ -1,5 +1,5 @@
 const createError = require('http-errors');
-const { TransactionPayment, sequelize } = require('@models');
+const { TransactionPayment, Transaction, sequelize } = require('@models');
 const { createActivityLog } = require('../activityLogs/activityLogsServices');
 
 const ENTITY_TYPE = 'transaction_payment';
@@ -10,6 +10,33 @@ const runInTransaction = async (outerTransaction, handler) => {
 	}
 
 	return sequelize.transaction(handler);
+};
+
+const recalculateTransactionPaymentSummary = async ({ transactionId, transaction }) => {
+	if (!transactionId) return;
+
+	const transactionRecord = await Transaction.findByPk(transactionId, { transaction });
+	if (!transactionRecord) return;
+
+	const [result] = await TransactionPayment.findAll({
+		attributes: [[sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('amount')), 0), 'total_paid']],
+		where: { transaction_id: transactionId },
+		transaction,
+		raw: true,
+	});
+
+	const totalPaid = Number(result?.total_paid || 0);
+	const totalCost = Number(transactionRecord.total_cost || 0);
+	const outstandingRaw = totalCost - totalPaid;
+	const outstandingAmount = outstandingRaw > 0 ? Number(outstandingRaw.toFixed(2)) : 0;
+
+	await transactionRecord.update(
+		{
+			paid_amount: Number(totalPaid.toFixed(2)),
+			outstanding_amount: outstandingAmount,
+		},
+		{ transaction },
+	);
 };
 
 exports.listTransactionPayments = async ({
@@ -97,6 +124,11 @@ exports.createTransactionPayment = async ({ data, actorUserId, transaction: oute
 	return runInTransaction(outerTransaction, async (transaction) => {
 		const payment = await TransactionPayment.create(data, { transaction });
 
+		await recalculateTransactionPaymentSummary({
+			transactionId: payment.transaction_id,
+			transaction,
+		});
+
 		await createActivityLog({
 			actorUserId,
 			entityType: ENTITY_TYPE,
@@ -127,6 +159,11 @@ exports.updateTransactionPayment = async ({ paymentId, data, actorUserId, transa
 		await payment.update(data, { transaction });
 		const after = payment.toJSON();
 
+		await recalculateTransactionPaymentSummary({
+			transactionId: payment.transaction_id,
+			transaction,
+		});
+
 		await createActivityLog({
 			actorUserId,
 			entityType: ENTITY_TYPE,
@@ -151,6 +188,11 @@ exports.deleteTransactionPayment = async ({ paymentId, actorUserId, transaction:
 
 		const archive = payment.toJSON();
 		await payment.destroy({ transaction });
+
+		await recalculateTransactionPaymentSummary({
+			transactionId: payment.transaction_id,
+			transaction,
+		});
 
 		await createActivityLog({
 			actorUserId,
