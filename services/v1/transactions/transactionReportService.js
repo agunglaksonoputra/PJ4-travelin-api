@@ -1,6 +1,7 @@
 const createError = require('http-errors');
-const { TransactionReport, sequelize } = require('@models');
+const { TransactionReport, Transaction, sequelize } = require('@models');
 const { createActivityLog } = require('../activityLogs/activityLogsServices');
+const { createTransactionStatusLog } = require('./transactionsStatusLogsServices');
 
 const ENTITY_TYPE = 'transaction_report';
 
@@ -52,8 +53,16 @@ exports.createTransactionReport = async ({ data, actorUserId, transaction: outer
   }
 
   return runInTransaction(outerTransaction, async (transaction) => {
+    // Verify transaction exists
+    const txRecord = await Transaction.findByPk(data.transaction_id, { transaction });
+    if (!txRecord) {
+      throw createError(404, 'Transaction not found');
+    }
+
+    // Create the report
     const report = await TransactionReport.create(data, { transaction });
 
+    // Log the report creation activity
     await createActivityLog({
       actorUserId,
       entityType: ENTITY_TYPE,
@@ -63,6 +72,32 @@ exports.createTransactionReport = async ({ data, actorUserId, transaction: outer
       meta: { payload: data },
       transaction,
     });
+
+    // Update transaction status to 'closed'
+    const previousStatus = txRecord.status;
+    await txRecord.update({ status: 'closed' }, { transaction });
+
+    // Log the status change
+    if (previousStatus !== 'closed') {
+      await createTransactionStatusLog({
+        transactionId: data.transaction_id,
+        fromStatus: previousStatus,
+        toStatus: 'closed',
+        note: 'Status changed to closed after report creation',
+        actorUserId,
+        transaction,
+      });
+
+      await createActivityLog({
+        actorUserId,
+        entityType: 'transaction',
+        entityId: data.transaction_id,
+        action: 'update',
+        message: `Transaction status updated from ${previousStatus} to closed due to report creation`,
+        meta: { reportId: report.id, fromStatus: previousStatus, toStatus: 'closed' },
+        transaction,
+      });
+    }
 
     return report;
   });

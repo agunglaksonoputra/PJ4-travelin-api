@@ -28,6 +28,18 @@ exports.listTransactions = async (req, res) => {
 	}
 };
 
+exports.getTransactionSummary = async (req, res) => {
+	try {
+		const vehicleId = parseInteger(req.query.vehicle_id);
+		const summary = await transactionService.getTransactionSummary({ vehicleId });
+
+		res.status(200).json({ success: true, data: summary });
+	} catch (err) {
+		const statusCode = getStatusCode(err);
+		res.status(statusCode).json({ success: false, error: err.message || 'Terjadi kesalahan' });
+	}
+};
+
 exports.getTransaction = async (req, res) => {
 	try {
 		const { id } = req.params;

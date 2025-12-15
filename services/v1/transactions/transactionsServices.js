@@ -18,6 +18,25 @@ exports.listTransactions = async ({ filters = {}, options = {} } = {}) => {
 	return Transaction.findAll({ where: { ...where, ...filters }, ...rest });
 };
 
+exports.getTransactionSummary = async ({ vehicleId } = {}) => {
+	const where = {};
+
+	if (vehicleId !== undefined && vehicleId !== null) {
+		where.vehicle_id = vehicleId;
+	}
+
+	return Transaction.findAll({
+		attributes: [
+			'status',
+			[sequelize.fn('COUNT', sequelize.col('id')), 'trip_count'],
+			[sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('total_cost')), 0), 'total_amount'],
+		],
+		where,
+		group: ['status'],
+		order: [['status', 'ASC']],
+	});
+};
+
 exports.getTransactionById = async (transactionId, options = {}) => {
 	const transaction = await Transaction.findByPk(transactionId, options);
 

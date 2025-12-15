@@ -1,5 +1,6 @@
 const createError = require('http-errors');
 const { TransactionPayment, Transaction, sequelize } = require('@models');
+const { createTransactionStatusLog } = require('./transactionsStatusLogsServices');
 const { createActivityLog } = require('../activityLogs/activityLogsServices');
 
 const ENTITY_TYPE = 'transaction_payment';
@@ -37,6 +38,42 @@ const recalculateTransactionPaymentSummary = async ({ transactionId, transaction
 		},
 		{ transaction },
 	);
+};
+
+// If the transaction is fully paid, move status to 'reporting'
+const setStatusReportingIfPaidOff = async ({ transactionRecord, actorUserId, transaction }) => {
+	if (!transactionRecord) return;
+
+	const currentStatus = String(transactionRecord.status || '').toLowerCase();
+	const outstanding = Number(transactionRecord.outstanding_amount || 0);
+
+	// Only auto-progress from 'payment' to 'reporting' when fully paid
+	if (currentStatus === 'payment' && outstanding === 0) {
+		const before = transactionRecord.toJSON();
+		await transactionRecord.update({ status: 'reporting' }, { transaction });
+		const after = transactionRecord.toJSON();
+
+		// Write status log
+		await createTransactionStatusLog({
+			transactionId: transactionRecord.id,
+			fromStatus: before.status,
+			toStatus: 'reporting',
+			note: 'Auto-set to reporting when payment fully settled',
+			actorUserId,
+			transaction,
+		});
+
+		// Also add activity log for visibility
+		await createActivityLog({
+			actorUserId,
+			entityType: 'transaction',
+			entityId: transactionRecord.id,
+			action: 'update',
+			message: `Transaction ${transactionRecord.trip_code} status auto-updated to reporting`,
+			meta: { before, after },
+			transaction,
+		});
+	}
 };
 
 exports.listTransactionPayments = async ({
@@ -125,9 +162,13 @@ exports.createTransactionPayment = async ({ data, actorUserId, transaction: oute
 		const payment = await TransactionPayment.create(data, { transaction });
 
 		await recalculateTransactionPaymentSummary({
-			transactionId: payment.transaction_id,
-			transaction,
-		});
+				transactionId: payment.transaction_id,
+				transaction,
+			});
+
+			// Fetch updated transaction and set status to 'reporting' if fully paid
+			const trx = await Transaction.findByPk(payment.transaction_id, { transaction });
+			await setStatusReportingIfPaidOff({ transactionRecord: trx, actorUserId, transaction });
 
 		await createActivityLog({
 			actorUserId,
@@ -160,9 +201,12 @@ exports.updateTransactionPayment = async ({ paymentId, data, actorUserId, transa
 		const after = payment.toJSON();
 
 		await recalculateTransactionPaymentSummary({
-			transactionId: payment.transaction_id,
-			transaction,
-		});
+				transactionId: payment.transaction_id,
+				transaction,
+			});
+
+			const trx = await Transaction.findByPk(payment.transaction_id, { transaction });
+			await setStatusReportingIfPaidOff({ transactionRecord: trx, actorUserId, transaction });
 
 		await createActivityLog({
 			actorUserId,
@@ -190,9 +234,12 @@ exports.deleteTransactionPayment = async ({ paymentId, actorUserId, transaction:
 		await payment.destroy({ transaction });
 
 		await recalculateTransactionPaymentSummary({
-			transactionId: payment.transaction_id,
-			transaction,
-		});
+				transactionId: payment.transaction_id,
+				transaction,
+			});
+
+			const trx = await Transaction.findByPk(payment.transaction_id, { transaction });
+			await setStatusReportingIfPaidOff({ transactionRecord: trx, actorUserId, transaction });
 
 		await createActivityLog({
 			actorUserId,
