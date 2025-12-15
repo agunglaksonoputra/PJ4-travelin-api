@@ -30,6 +30,41 @@ exports.listTransactionPayments = async ({
 	return TransactionPayment.findAll(query);
 };
 
+exports.listTransactionPaymentsByVehicle = async ({
+	vehicleId,
+	includeTransaction = false,
+	options = {},
+} = {}) => {
+	if (!vehicleId) {
+		throw createError(400, 'vehicleId is required');
+	}
+
+	const { where = {}, include = [], ...rest } = options;
+	const query = {
+		where,
+		include: [
+			{
+				association: 'transaction',
+				where: { vehicle_id: vehicleId },
+				required: true,
+			},
+			...include,
+		],
+		...rest,
+	};
+
+	if (!includeTransaction) {
+		query.include = query.include.map((relation) => {
+			if (relation.association === 'transaction') {
+				return { ...relation, attributes: [] };
+			}
+			return relation;
+		});
+	}
+
+	return TransactionPayment.findAll(query);
+};
+
 exports.getTransactionPaymentById = async (paymentId, { includeTransaction = false } = {}) => {
 	const query = {};
 

@@ -28,6 +28,21 @@ exports.listTransactionPayments = async (req, res) => {
 	}
 };
 
+exports.listTransactionPaymentsByVehicle = async (req, res) => {
+	try {
+		const { vehicleId } = req.params;
+		const payments = await transactionPaymentService.listTransactionPaymentsByVehicle({
+			vehicleId,
+			includeTransaction: parseBoolean(req.query.includeTransaction),
+		});
+
+		res.status(200).json({ success: true, data: payments });
+	} catch (err) {
+		const status = getStatusCode(err);
+		res.status(status).json({ success: false, error: err.message || 'Terjadi kesalahan' });
+	}
+};
+
 exports.getTransactionPayment = async (req, res) => {
 	try {
 		const { id } = req.params;

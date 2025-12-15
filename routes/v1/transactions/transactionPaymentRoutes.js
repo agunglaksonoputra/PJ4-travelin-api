@@ -7,6 +7,7 @@ router.use(protectRoute);
 router.use(authorizeRole(['admin']));
 
 router.get('/', transactionPaymentController.listTransactionPayments);
+router.get('/vehicle/:vehicleId', transactionPaymentController.listTransactionPaymentsByVehicle);
 router.get('/:id', transactionPaymentController.getTransactionPayment);
 router.post('/', transactionPaymentController.createTransactionPayment);
 router.put('/:id', transactionPaymentController.updateTransactionPayment);
