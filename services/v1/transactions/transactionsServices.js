@@ -1,5 +1,5 @@
 const createError = require('http-errors');
-const { Transaction, Owner, ProfitShare, sequelize } = require('@models');
+const { Transaction, Owner, ProfitShare, TransactionPayment, sequelize } = require('@models');
 const { createActivityLog } = require('../activityLogs/activityLogsServices');
 const { createTransactionStatusLog } = require('./transactionsStatusLogsServices');
 
@@ -140,6 +140,14 @@ exports.updateTransaction = async ({ transactionId, data, actorUserId, transacti
 				transaction,
 			});
 
+			// Buat initial TransactionPayment record ketika status berubah dari 'planning' ke 'payment'
+			await createInitialTransactionPaymentOnStatusChange({
+				transactionRecord: record,
+				previousStatus,
+				actorUserId,
+				transaction,
+			});
+
 			// When status becomes 'closed', distribute profit to all owners
 			if (after.status === 'closed' && previousStatus !== 'closed') {
 				await distributeProfitSharesToOwners({ transactionRecord: record, actorUserId, transaction });
@@ -232,13 +240,64 @@ exports.setTransactionPaymentPlan = async ({
 	});
 };
 
-// Helper: distribute profit shares to all owners based on shares_percentage
+const createInitialTransactionPaymentOnStatusChange = async ({
+	transactionRecord,
+	previousStatus,
+	actorUserId,
+	transaction,
+}) => {
+
+	const currentStatus = String(transactionRecord.status || '').toLowerCase();
+	const prevStatus = String(previousStatus || '').toLowerCase();
+
+	if (prevStatus !== 'planning' || currentStatus !== 'payment') {
+		return;
+	}
+
+	const existingPayments = await TransactionPayment.count(
+		{ where: { transaction_id: transactionRecord.id }, transaction }
+	);
+
+	if (existingPayments > 0) {
+		return;
+	}
+
+	const initialPayment = await TransactionPayment.create(
+		{
+			transaction_id: transactionRecord.id,
+			paid_at: new Date(),
+			method: 'transfer',
+			amount: 0,
+			note: 'Initial payment record created when transaction moved to payment status',
+		},
+		{ transaction }
+	);
+
+	await createActivityLog({
+		actorUserId,
+		entityType: 'transaction_payment',
+		entityId: initialPayment.id,
+		action: 'create',
+		message: `Initial TransactionPayment record created for transaction ${transactionRecord.trip_code} when status changed to payment`,
+		meta: {
+			transactionId: transactionRecord.id,
+			statusTransition: `${prevStatus} -> ${currentStatus}`,
+			paymentData: {
+				transaction_id: transactionRecord.id,
+				method: 'transfer',
+				amount: 0,
+			},
+		},
+		transaction,
+	});
+};
+
 const round2 = (n) => Number((Math.round(Number(n) * 100) / 100).toFixed(2));
 
 const distributeProfitSharesToOwners = async ({ transactionRecord, actorUserId, transaction }) => {
 	const total = Number(transactionRecord.total_cost || 0);
 	if (!Number.isFinite(total) || total <= 0) {
-		return; // Nothing to distribute
+		return;
 	}
 
 	const owners = await Owner.findAll({ attributes: ['id', 'name', 'shares_percentage'], transaction });
@@ -250,7 +309,6 @@ const distributeProfitSharesToOwners = async ({ transactionRecord, actorUserId, 
 
 		const shareAmount = round2((percentage / 100) * total);
 
-		// Upsert by (transaction_id, owner_id)
 		const existing = await ProfitShare.findOne({
 			where: { transaction_id: transactionRecord.id, owner_id: owner.id },
 			transaction,

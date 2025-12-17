@@ -80,12 +80,17 @@ exports.listTransactionPayments = async ({
 	filters = {},
 	includeTransaction = false,
 	options = {},
+	includeDeleted = false,
 } = {}) => {
 	const { where = {}, ...rest } = options;
 	const query = {
 		where: { ...where, ...filters },
 		...rest,
 	};
+
+	if (includeDeleted) {
+		query.paranoid = false;
+	}
 
 	if (includeTransaction) {
 		query.include = [{ association: 'transaction' }];
@@ -98,6 +103,8 @@ exports.listTransactionPaymentsByVehicle = async ({
 	vehicleId,
 	includeTransaction = false,
 	options = {},
+	includeDeleted = false,
+	onlyPaymentStatus = true,
 } = {}) => {
 	if (!vehicleId) {
 		throw createError(400, 'vehicleId is required');
@@ -109,13 +116,21 @@ exports.listTransactionPaymentsByVehicle = async ({
 		include: [
 			{
 				association: 'transaction',
-				where: { vehicle_id: vehicleId },
+				where: {
+					vehicle_id: vehicleId,
+					// Hanya tampilkan transaksi yang masih berada di status payment (default)
+					...(onlyPaymentStatus ? { status: 'payment' } : {}),
+				},
 				required: true,
 			},
 			...include,
 		],
 		...rest,
 	};
+
+	if (includeDeleted) {
+		query.paranoid = false;
+	}
 
 	if (!includeTransaction) {
 		query.include = query.include.map((relation) => {
@@ -162,13 +177,13 @@ exports.createTransactionPayment = async ({ data, actorUserId, transaction: oute
 		const payment = await TransactionPayment.create(data, { transaction });
 
 		await recalculateTransactionPaymentSummary({
-				transactionId: payment.transaction_id,
-				transaction,
-			});
+			transactionId: payment.transaction_id,
+			transaction,
+		});
 
-			// Fetch updated transaction and set status to 'reporting' if fully paid
-			const trx = await Transaction.findByPk(payment.transaction_id, { transaction });
-			await setStatusReportingIfPaidOff({ transactionRecord: trx, actorUserId, transaction });
+		// Fetch updated transaction and set status to 'reporting' if fully paid
+		const trx = await Transaction.findByPk(payment.transaction_id, { transaction });
+		await setStatusReportingIfPaidOff({ transactionRecord: trx, actorUserId, transaction });
 
 		await createActivityLog({
 			actorUserId,
