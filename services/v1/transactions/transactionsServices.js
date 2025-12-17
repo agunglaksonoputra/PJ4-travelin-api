@@ -37,6 +37,14 @@ exports.getTransactionSummary = async ({ vehicleId } = {}) => {
 	});
 };
 
+// Get total paid_amount across all closed transactions
+exports.getTotalPaidAmountClosed = async () => {
+	const total = await Transaction.sum('paid_amount', { where: { status: 'closed' } });
+	const numeric = Number(total || 0);
+	if (!Number.isFinite(numeric)) return 0;
+	return Math.round(numeric * 100) / 100;
+};
+
 exports.getTransactionById = async (transactionId, options = {}) => {
 	const transaction = await Transaction.findByPk(transactionId, options);
 

@@ -40,6 +40,16 @@ exports.getTransactionSummary = async (req, res) => {
 	}
 };
 
+exports.getTotalPaidAmountClosed = async (req, res) => {
+	try {
+		const total = await transactionService.getTotalPaidAmountClosed();
+		res.status(200).json({ success: true, data: { total_paid_amount: total } });
+	} catch (err) {
+		const statusCode = getStatusCode(err);
+		res.status(statusCode).json({ success: false, error: err.message || 'Terjadi kesalahan' });
+	}
+};
+
 exports.getTransaction = async (req, res) => {
 	try {
 		const { id } = req.params;
