@@ -137,15 +137,19 @@ exports.getReportingTransactions = async (req, res) => {
 
 exports.getTransactionsByStatus = async (req, res) => {
 	try {
-		const { status, limit } = req.query;
+		// Support both query parameter and path parameter
+		const statusFromQuery = req.query.status;
+		const statusFromParam = req.params.status;
+		const status = statusFromParam || statusFromQuery;
 
 		if (!status) {
 			return res.status(400).json({ 
 				success: false, 
-				error: 'status query parameter is required' 
+				error: 'status parameter is required (use /by-status/:status or /by-status?status=value)' 
 			});
 		}
 
+		const limit = req.query.limit;
 		const parsedLimit = limit ? parseInteger(limit) : 1;
 		const transactions = await transactionService.getTransactionsByStatus({ 
 			status, 
