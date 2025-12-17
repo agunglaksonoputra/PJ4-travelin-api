@@ -5,6 +5,16 @@ const { createTransactionStatusLog } = require('./transactionsStatusLogsServices
 
 const ENTITY_TYPE = 'transaction_report';
 
+const calculateTotalOperationalCost = (data) => {
+  const driverFee = Number(data.driver_fee) || 0;
+  const gasolineCost = Number(data.gasoline_cost) || 0;
+  const tollCost = Number(data.toll_cost) || 0;
+  const parkingCost = Number(data.parking_cost) || 0;
+  const miscCost = Number(data.misc_cost) || 0;
+
+  return driverFee + gasolineCost + tollCost + parkingCost + miscCost;
+};
+
 const runInTransaction = async (outerTransaction, handler) => {
   if (outerTransaction) {
     return handler(outerTransaction);
@@ -53,16 +63,15 @@ exports.createTransactionReport = async ({ data, actorUserId, transaction: outer
   }
 
   return runInTransaction(outerTransaction, async (transaction) => {
-    // Verify transaction exists
     const txRecord = await Transaction.findByPk(data.transaction_id, { transaction });
     if (!txRecord) {
       throw createError(404, 'Transaction not found');
     }
 
-    // Create the report
+    data.total_operational_cost = calculateTotalOperationalCost(data);
+
     const report = await TransactionReport.create(data, { transaction });
 
-    // Log the report creation activity
     await createActivityLog({
       actorUserId,
       entityType: ENTITY_TYPE,
@@ -73,11 +82,9 @@ exports.createTransactionReport = async ({ data, actorUserId, transaction: outer
       transaction,
     });
 
-    // Update transaction status to 'closed'
     const previousStatus = txRecord.status;
     await txRecord.update({ status: 'closed' }, { transaction });
 
-    // Log the status change
     if (previousStatus !== 'closed') {
       await createTransactionStatusLog({
         transactionId: data.transaction_id,
@@ -113,6 +120,20 @@ exports.updateTransactionReport = async ({ reportId, data, actorUserId, transact
 
     if (!report) {
       throw createError(404, 'Transaction report not found');
+    }
+
+    const costFields = ['driver_fee', 'gasoline_cost', 'toll_cost', 'parking_cost', 'misc_cost'];
+    const hasCostFieldUpdate = costFields.some(field => data.hasOwnProperty(field));
+    
+    if (hasCostFieldUpdate) {
+      const mergedData = {
+        driver_fee: data.driver_fee !== undefined ? data.driver_fee : report.driver_fee,
+        gasoline_cost: data.gasoline_cost !== undefined ? data.gasoline_cost : report.gasoline_cost,
+        toll_cost: data.toll_cost !== undefined ? data.toll_cost : report.toll_cost,
+        parking_cost: data.parking_cost !== undefined ? data.parking_cost : report.parking_cost,
+        misc_cost: data.misc_cost !== undefined ? data.misc_cost : report.misc_cost,
+      };
+      data.total_operational_cost = calculateTotalOperationalCost(mergedData);
     }
 
     const before = report.toJSON();
@@ -154,4 +175,57 @@ exports.deleteTransactionReport = async ({ reportId, actorUserId, transaction: o
       transaction,
     });
   });
+};
+
+exports.getTotalOperationalCostByTransaction = async (transactionId) => {
+  if (!transactionId) {
+    throw createError(400, 'transaction_id is required');
+  }
+
+  const report = await TransactionReport.findOne({
+    where: { transaction_id: transactionId },
+    attributes: ['id', 'transaction_id', 'total_operational_cost'],
+    include: [{
+      association: 'transaction',
+      attributes: ['id', 'vehicle_name', 'status']
+    }]
+  });
+
+  if (!report) {
+    throw createError(404, 'Transaction report not found for this transaction');
+  }
+
+  return {
+    transaction_id: report.transaction_id,
+    report_id: report.id,
+    vehicle_name: report.transaction?.vehicle_name,
+    status: report.transaction?.status,
+    total_operational_cost: parseFloat(report.total_operational_cost) || 0,
+  };
+};
+
+exports.getTotalOperationalCostOverall = async ({ filters = {} } = {}) => {
+  const { Sequelize } = require('sequelize');
+  
+  const whereClause = { ...filters };
+
+  const result = await TransactionReport.findOne({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('total_operational_cost')), 'total'],
+      [Sequelize.fn('COUNT', Sequelize.col('id')), 'count'],
+      [Sequelize.fn('AVG', Sequelize.col('total_operational_cost')), 'average'],
+    ],
+    where: whereClause,
+    raw: true,
+  });
+
+  const total = parseFloat(result?.total) || 0;
+  const count = parseInt(result?.count) || 0;
+  const average = parseFloat(result?.average) || 0;
+
+  return {
+    total_operational_cost: total,
+    total_reports: count,
+    average_operational_cost: average,
+  };
 };

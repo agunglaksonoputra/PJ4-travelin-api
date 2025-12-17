@@ -8,6 +8,8 @@ router.use(protectRoute);
 router.use(authorizeRole(['admin']));
 
 router.get('/', transactionReportController.listTransactionReports);
+router.get('/total/overall', transactionReportController.getTotalOperationalCostOverall);
+router.get('/total/transaction/:transactionId', transactionReportController.getTotalOperationalCostByTransaction);
 router.get('/:id', transactionReportController.getTransactionReport);
 router.post('/', transactionReportController.createTransactionReport);
 router.put('/:id', transactionReportController.updateTransactionReport);

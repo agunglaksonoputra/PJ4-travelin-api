@@ -79,3 +79,36 @@ exports.deleteTransactionReport = async (req, res) => {
     res.status(status).json({ success: false, error: err.message || 'Terjadi kesalahan' });
   }
 };
+
+exports.getTotalOperationalCostByTransaction = async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+    const result = await transactionReportService.getTotalOperationalCostByTransaction(transactionId);
+
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    const status = getStatusCode(err);
+    res.status(status).json({ success: false, error: err.message || 'Terjadi kesalahan' });
+  }
+};
+
+exports.getTotalOperationalCostOverall = async (req, res) => {
+  try {
+    const { report_date_from, report_date_to } = req.query;
+    
+    const filters = {};
+    if (report_date_from || report_date_to) {
+      const { Op } = require('sequelize');
+      filters.report_date = {};
+      if (report_date_from) filters.report_date[Op.gte] = report_date_from;
+      if (report_date_to) filters.report_date[Op.lte] = report_date_to;
+    }
+
+    const result = await transactionReportService.getTotalOperationalCostOverall({ filters });
+
+    res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    const status = getStatusCode(err);
+    res.status(status).json({ success: false, error: err.message || 'Terjadi kesalahan' });
+  }
+};
