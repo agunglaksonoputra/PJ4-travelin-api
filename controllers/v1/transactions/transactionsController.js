@@ -134,3 +134,42 @@ exports.getReportingTransactions = async (req, res) => {
 		res.status(statusCode).json({ success: false, error: err.message || 'Terjadi kesalahan' });
 	}
 };
+
+exports.getTransactionsByStatus = async (req, res) => {
+	try {
+		const { status, limit } = req.query;
+
+		if (!status) {
+			return res.status(400).json({ 
+				success: false, 
+				error: 'status query parameter is required' 
+			});
+		}
+
+		const parsedLimit = limit ? parseInteger(limit) : 1;
+		const transactions = await transactionService.getTransactionsByStatus({ 
+			status, 
+			limit: parsedLimit 
+		});
+
+		res.status(200).json({ success: true, data: transactions });
+	} catch (err) {
+		const statusCode = getStatusCode(err);
+		res.status(statusCode).json({ success: false, error: err.message || 'Terjadi kesalahan' });
+	}
+};
+
+exports.getOneTransactionPerStatus = async (req, res) => {
+	try {
+		const transactions = await transactionService.getOneTransactionPerStatus();
+
+		res.status(200).json({ 
+			success: true, 
+			data: transactions,
+			message: 'One transaction per each status' 
+		});
+	} catch (err) {
+		const statusCode = getStatusCode(err);
+		res.status(statusCode).json({ success: false, error: err.message || 'Terjadi kesalahan' });
+	}
+};

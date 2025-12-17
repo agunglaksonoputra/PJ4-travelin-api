@@ -295,6 +295,35 @@ const distributeProfitSharesToOwners = async ({ transactionRecord, actorUserId, 
 	}
 };
 
+exports.getTransactionsByStatus = async ({ status, limit = 1 } = {}) => {
+	const where = {};
+
+	if (status) {
+		where.status = status;
+	}
+
+	return Transaction.findAll({
+		where,
+		limit: limit > 0 ? limit : undefined,
+		order: [['created_at', 'DESC']],
+	});
+};
+
+exports.getOneTransactionPerStatus = async () => {
+	const statuses = ['planning', 'payment', 'reporting', 'closed', 'canceled'];
+	const result = {};
+
+	for (const status of statuses) {
+		const transaction = await Transaction.findOne({
+			where: { status },
+			order: [['created_at', 'DESC']],
+		});
+		result[status] = transaction || null;
+	}
+
+	return result;
+};
+
 exports.deleteTransaction = async ({ transactionId, actorUserId, transaction: outerTransaction }) => {
 	return runInTransaction(outerTransaction, async (transaction) => {
 		const record = await Transaction.findByPk(transactionId, { transaction, paranoid: false });
