@@ -9,6 +9,7 @@ router.use(authorizeRole(['admin']));
 
 router.get('/summary', transactionsController.getTransactionSummary);
 router.get('/paid-amount/closed/total', transactionsController.getTotalPaidAmountClosed);
+router.get('/reporting', transactionsController.getReportingTransactions);
 router.get('/', transactionsController.listTransactions);
 router.get('/:id', transactionsController.getTransaction);
 router.post('/', transactionsController.createTransaction);

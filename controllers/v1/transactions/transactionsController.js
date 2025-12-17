@@ -116,3 +116,21 @@ exports.deleteTransaction = async (req, res) => {
 		res.status(statusCode).json({ success: false, error: err.message || 'Terjadi kesalahan' });
 	}
 };
+
+exports.getReportingTransactions = async (req, res) => {
+	try {
+		const { vehicle_id } = req.query;
+		const filters = { status: 'reporting' };
+		
+		if (vehicle_id) {
+			filters.vehicle_id = parseInteger(vehicle_id);
+		}
+
+		const transactions = await transactionService.listTransactions({ filters });
+
+		res.status(200).json({ success: true, data: transactions });
+	} catch (err) {
+		const statusCode = getStatusCode(err);
+		res.status(statusCode).json({ success: false, error: err.message || 'Terjadi kesalahan' });
+	}
+};
