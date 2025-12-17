@@ -174,6 +174,38 @@ exports.setTransactionPaymentPlan = async ({
 		throw createError(400, 'payment_plan_method must be either cash or credit');
 	}
 
+	// Extra fields from dialog for TransactionPayment creation
+	const paymentTypeInput = data?.payment_type || data?.transaction_payment_type || data?.paymentType;
+	const noteInput = data?.note || data?.payment_note;
+	const paidAtInput = data?.paid_at || data?.date;
+
+	const normalizePaymentType = (v) => {
+		if (!v) return null;
+		const n = String(v).toLowerCase();
+		if (n === 'cash' || n === 'transfer') return n;
+		return null;
+	};
+
+	const normalizedPaymentType = normalizePaymentType(paymentTypeInput);
+
+	const parsePaidAt = (v) => {
+		if (!v) return new Date();
+		if (v instanceof Date) return v;
+		const d1 = new Date(v);
+		if (!isNaN(d1.getTime())) return d1;
+		if (typeof v === 'string') {
+			const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+			if (m) {
+				const [_, dd, mm, yyyy] = m;
+				const d2 = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+				if (!isNaN(d2.getTime())) return d2;
+			}
+		}
+		return new Date();
+	};
+
+	const paidAt = parsePaidAt(paidAtInput);
+
 	const toCurrency = (value) => {
 		if (value === undefined || value === null || value === '') {
 			return 0;
@@ -208,11 +240,17 @@ exports.setTransactionPaymentPlan = async ({
 			: 0;
 
 		const before = record.toJSON();
+		const previousStatus = before.status;
+
+		// Auto-transition to 'payment' if currently 'planning'
+		const newStatus = previousStatus === 'planning' ? 'payment' : previousStatus;
+
 		await record.update(
 			{
 				payment_plan_method: normalizedMethod,
 				paid_amount: paidAmount,
 				outstanding_amount: outstandingAmount,
+				status: newStatus,
 			},
 			{ transaction }
 		);
@@ -235,6 +273,40 @@ exports.setTransactionPaymentPlan = async ({
 			},
 			transaction,
 		});
+
+		// Write status log when status changed here
+		if (newStatus !== previousStatus) {
+			await createTransactionStatusLog({
+				transactionId: record.id,
+				fromStatus: previousStatus,
+				toStatus: newStatus,
+				actorUserId,
+				transaction,
+			});
+		}
+
+		// Create a TransactionPayment row reflecting dialog input when amount > 0
+		if (paidAmount > 0) {
+			const paymentPayload = {
+				transaction_id: record.id,
+				paid_at: paidAt,
+				method: normalizedPaymentType || 'transfer',
+				amount: paidAmount,
+				note: noteInput || null,
+			};
+
+			const payment = await TransactionPayment.create(paymentPayload, { transaction });
+
+			await createActivityLog({
+				actorUserId,
+				entityType: 'transaction_payment',
+				entityId: payment.id,
+				action: 'create',
+				message: `TransactionPayment recorded for transaction ${record.trip_code}`,
+				meta: { payment: paymentPayload },
+				transaction,
+			});
+		}
 
 		return record;
 	});
