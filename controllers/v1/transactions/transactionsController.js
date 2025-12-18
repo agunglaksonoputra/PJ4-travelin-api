@@ -28,6 +28,28 @@ exports.listTransactions = async (req, res) => {
 	}
 };
 
+exports.getTransactionSummary = async (req, res) => {
+	try {
+		const vehicleId = parseInteger(req.query.vehicle_id);
+		const summary = await transactionService.getTransactionSummary({ vehicleId });
+
+		res.status(200).json({ success: true, data: summary });
+	} catch (err) {
+		const statusCode = getStatusCode(err);
+		res.status(statusCode).json({ success: false, error: err.message || 'Terjadi kesalahan' });
+	}
+};
+
+exports.getTotalPaidAmountClosed = async (req, res) => {
+	try {
+		const total = await transactionService.getTotalPaidAmountClosed();
+		res.status(200).json({ success: true, data: { total_paid_amount: total } });
+	} catch (err) {
+		const statusCode = getStatusCode(err);
+		res.status(statusCode).json({ success: false, error: err.message || 'Terjadi kesalahan' });
+	}
+};
+
 exports.getTransaction = async (req, res) => {
 	try {
 		const { id } = req.params;
@@ -89,6 +111,67 @@ exports.deleteTransaction = async (req, res) => {
 		await transactionService.deleteTransaction({ transactionId: id, actorUserId });
 
 		res.status(200).json({ success: true, message: 'Transaction deleted' });
+	} catch (err) {
+		const statusCode = getStatusCode(err);
+		res.status(statusCode).json({ success: false, error: err.message || 'Terjadi kesalahan' });
+	}
+};
+
+exports.getReportingTransactions = async (req, res) => {
+	try {
+		const { vehicle_id } = req.query;
+		const filters = { status: 'reporting' };
+		
+		if (vehicle_id) {
+			filters.vehicle_id = parseInteger(vehicle_id);
+		}
+
+		const transactions = await transactionService.listTransactions({ filters });
+
+		res.status(200).json({ success: true, data: transactions });
+	} catch (err) {
+		const statusCode = getStatusCode(err);
+		res.status(statusCode).json({ success: false, error: err.message || 'Terjadi kesalahan' });
+	}
+};
+
+exports.getTransactionsByStatus = async (req, res) => {
+	try {
+		// Support both query parameter and path parameter
+		const statusFromQuery = req.query.status;
+		const statusFromParam = req.params.status;
+		const status = statusFromParam || statusFromQuery;
+
+		if (!status) {
+			return res.status(400).json({ 
+				success: false, 
+				error: 'status parameter is required (use /by-status/:status or /by-status?status=value)' 
+			});
+		}
+
+		const limit = req.query.limit;
+		const parsedLimit = limit ? parseInteger(limit) : 1;
+		const transactions = await transactionService.getTransactionsByStatus({ 
+			status, 
+			limit: parsedLimit 
+		});
+
+		res.status(200).json({ success: true, data: transactions });
+	} catch (err) {
+		const statusCode = getStatusCode(err);
+		res.status(statusCode).json({ success: false, error: err.message || 'Terjadi kesalahan' });
+	}
+};
+
+exports.getOneTransactionPerStatus = async (req, res) => {
+	try {
+		const transactions = await transactionService.getOneTransactionPerStatus();
+
+		res.status(200).json({ 
+			success: true, 
+			data: transactions,
+			message: 'One transaction per each status' 
+		});
 	} catch (err) {
 		const statusCode = getStatusCode(err);
 		res.status(statusCode).json({ success: false, error: err.message || 'Terjadi kesalahan' });

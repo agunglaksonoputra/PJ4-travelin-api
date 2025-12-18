@@ -7,6 +7,12 @@ const { protectRoute, authorizeRole } = require('@middlewares/auth.middleware');
 router.use(protectRoute);
 router.use(authorizeRole(['admin']));
 
+router.get('/summary', transactionsController.getTransactionSummary);
+router.get('/paid-amount/closed/total', transactionsController.getTotalPaidAmountClosed);
+router.get('/by-status/all', transactionsController.getOneTransactionPerStatus);
+router.get('/by-status', transactionsController.getTransactionsByStatus);
+router.get('/by-status/:status', transactionsController.getTransactionsByStatus);
+router.get('/reporting', transactionsController.getReportingTransactions);
 router.get('/', transactionsController.listTransactions);
 router.get('/:id', transactionsController.getTransaction);
 router.post('/', transactionsController.createTransaction);

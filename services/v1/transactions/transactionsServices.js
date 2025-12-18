@@ -1,5 +1,5 @@
 const createError = require('http-errors');
-const { Transaction, Owner, ProfitShare, sequelize } = require('@models');
+const { Transaction, Owner, ProfitShare, TransactionPayment, sequelize } = require('@models');
 const { createActivityLog } = require('../activityLogs/activityLogsServices');
 const { createTransactionStatusLog } = require('./transactionsStatusLogsServices');
 
@@ -16,6 +16,33 @@ const runInTransaction = async (outerTransaction, handler) => {
 exports.listTransactions = async ({ filters = {}, options = {} } = {}) => {
 	const { where = {}, ...rest } = options;
 	return Transaction.findAll({ where: { ...where, ...filters }, ...rest });
+};
+
+exports.getTransactionSummary = async ({ vehicleId } = {}) => {
+	const where = {};
+
+	if (vehicleId !== undefined && vehicleId !== null) {
+		where.vehicle_id = vehicleId;
+	}
+
+	return Transaction.findAll({
+		attributes: [
+			'status',
+			[sequelize.fn('COUNT', sequelize.col('id')), 'trip_count'],
+			[sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('total_cost')), 0), 'total_amount'],
+		],
+		where,
+		group: ['status'],
+		order: [['status', 'ASC']],
+	});
+};
+
+// Get total paid_amount across all closed transactions
+exports.getTotalPaidAmountClosed = async () => {
+	const total = await Transaction.sum('paid_amount', { where: { status: 'closed' } });
+	const numeric = Number(total || 0);
+	if (!Number.isFinite(numeric)) return 0;
+	return Math.round(numeric * 100) / 100;
 };
 
 exports.getTransactionById = async (transactionId, options = {}) => {
@@ -113,6 +140,14 @@ exports.updateTransaction = async ({ transactionId, data, actorUserId, transacti
 				transaction,
 			});
 
+			// Buat initial TransactionPayment record ketika status berubah dari 'planning' ke 'payment'
+			await createInitialTransactionPaymentOnStatusChange({
+				transactionRecord: record,
+				previousStatus,
+				actorUserId,
+				transaction,
+			});
+
 			// When status becomes 'closed', distribute profit to all owners
 			if (after.status === 'closed' && previousStatus !== 'closed') {
 				await distributeProfitSharesToOwners({ transactionRecord: record, actorUserId, transaction });
@@ -138,6 +173,38 @@ exports.setTransactionPaymentPlan = async ({
 	if (!['cash', 'credit'].includes(normalizedMethod)) {
 		throw createError(400, 'payment_plan_method must be either cash or credit');
 	}
+
+	// Extra fields from dialog for TransactionPayment creation
+	const paymentTypeInput = data?.payment_type || data?.transaction_payment_type || data?.paymentType;
+	const noteInput = data?.note || data?.payment_note;
+	const paidAtInput = data?.paid_at || data?.date;
+
+	const normalizePaymentType = (v) => {
+		if (!v) return null;
+		const n = String(v).toLowerCase();
+		if (n === 'cash' || n === 'transfer') return n;
+		return null;
+	};
+
+	const normalizedPaymentType = normalizePaymentType(paymentTypeInput);
+
+	const parsePaidAt = (v) => {
+		if (!v) return new Date();
+		if (v instanceof Date) return v;
+		const d1 = new Date(v);
+		if (!isNaN(d1.getTime())) return d1;
+		if (typeof v === 'string') {
+			const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+			if (m) {
+				const [_, dd, mm, yyyy] = m;
+				const d2 = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+				if (!isNaN(d2.getTime())) return d2;
+			}
+		}
+		return new Date();
+	};
+
+	const paidAt = parsePaidAt(paidAtInput);
 
 	const toCurrency = (value) => {
 		if (value === undefined || value === null || value === '') {
@@ -173,11 +240,17 @@ exports.setTransactionPaymentPlan = async ({
 			: 0;
 
 		const before = record.toJSON();
+		const previousStatus = before.status;
+
+		// Auto-transition to 'payment' if currently 'planning'
+		const newStatus = previousStatus === 'planning' ? 'payment' : previousStatus;
+
 		await record.update(
 			{
 				payment_plan_method: normalizedMethod,
 				paid_amount: paidAmount,
 				outstanding_amount: outstandingAmount,
+				status: newStatus,
 			},
 			{ transaction }
 		);
@@ -201,17 +274,102 @@ exports.setTransactionPaymentPlan = async ({
 			transaction,
 		});
 
+		// Write status log when status changed here
+		if (newStatus !== previousStatus) {
+			await createTransactionStatusLog({
+				transactionId: record.id,
+				fromStatus: previousStatus,
+				toStatus: newStatus,
+				actorUserId,
+				transaction,
+			});
+		}
+
+		// Create a TransactionPayment row reflecting dialog input when amount > 0
+		if (paidAmount > 0) {
+			const paymentPayload = {
+				transaction_id: record.id,
+				paid_at: paidAt,
+				method: normalizedPaymentType || 'transfer',
+				amount: paidAmount,
+				note: noteInput || null,
+			};
+
+			const payment = await TransactionPayment.create(paymentPayload, { transaction });
+
+			await createActivityLog({
+				actorUserId,
+				entityType: 'transaction_payment',
+				entityId: payment.id,
+				action: 'create',
+				message: `TransactionPayment recorded for transaction ${record.trip_code}`,
+				meta: { payment: paymentPayload },
+				transaction,
+			});
+		}
+
 		return record;
 	});
 };
 
-// Helper: distribute profit shares to all owners based on shares_percentage
+const createInitialTransactionPaymentOnStatusChange = async ({
+	transactionRecord,
+	previousStatus,
+	actorUserId,
+	transaction,
+}) => {
+
+	const currentStatus = String(transactionRecord.status || '').toLowerCase();
+	const prevStatus = String(previousStatus || '').toLowerCase();
+
+	if (prevStatus !== 'planning' || currentStatus !== 'payment') {
+		return;
+	}
+
+	const existingPayments = await TransactionPayment.count(
+		{ where: { transaction_id: transactionRecord.id }, transaction }
+	);
+
+	if (existingPayments > 0) {
+		return;
+	}
+
+	const initialPayment = await TransactionPayment.create(
+		{
+			transaction_id: transactionRecord.id,
+			paid_at: new Date(),
+			method: 'transfer',
+			amount: 0,
+			note: 'Initial payment record created when transaction moved to payment status',
+		},
+		{ transaction }
+	);
+
+	await createActivityLog({
+		actorUserId,
+		entityType: 'transaction_payment',
+		entityId: initialPayment.id,
+		action: 'create',
+		message: `Initial TransactionPayment record created for transaction ${transactionRecord.trip_code} when status changed to payment`,
+		meta: {
+			transactionId: transactionRecord.id,
+			statusTransition: `${prevStatus} -> ${currentStatus}`,
+			paymentData: {
+				transaction_id: transactionRecord.id,
+				method: 'transfer',
+				amount: 0,
+			},
+		},
+		transaction,
+	});
+};
+
 const round2 = (n) => Number((Math.round(Number(n) * 100) / 100).toFixed(2));
 
 const distributeProfitSharesToOwners = async ({ transactionRecord, actorUserId, transaction }) => {
 	const total = Number(transactionRecord.total_cost || 0);
 	if (!Number.isFinite(total) || total <= 0) {
-		return; // Nothing to distribute
+		return;
 	}
 
 	const owners = await Owner.findAll({ attributes: ['id', 'name', 'shares_percentage'], transaction });
@@ -223,7 +381,6 @@ const distributeProfitSharesToOwners = async ({ transactionRecord, actorUserId, 
 
 		const shareAmount = round2((percentage / 100) * total);
 
-		// Upsert by (transaction_id, owner_id)
 		const existing = await ProfitShare.findOne({
 			where: { transaction_id: transactionRecord.id, owner_id: owner.id },
 			transaction,
@@ -266,6 +423,35 @@ const distributeProfitSharesToOwners = async ({ transactionRecord, actorUserId, 
 			});
 		}
 	}
+};
+
+exports.getTransactionsByStatus = async ({ status, limit = 1 } = {}) => {
+	const where = {};
+
+	if (status) {
+		where.status = status;
+	}
+
+	return Transaction.findAll({
+		where,
+		limit: limit > 0 ? limit : undefined,
+		order: [['created_at', 'DESC']],
+	});
+};
+
+exports.getOneTransactionPerStatus = async () => {
+	const statuses = ['planning', 'payment', 'reporting', 'closed', 'canceled'];
+	const result = {};
+
+	for (const status of statuses) {
+		const transaction = await Transaction.findOne({
+			where: { status },
+			order: [['created_at', 'DESC']],
+		});
+		result[status] = transaction || null;
+	}
+
+	return result;
 };
 
 exports.deleteTransaction = async ({ transactionId, actorUserId, transaction: outerTransaction }) => {
