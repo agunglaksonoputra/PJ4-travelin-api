@@ -1,16 +1,16 @@
 module.exports = (sequelize, DataTypes) => {
   const Transaction = sequelize.define(
-    'Transaction',
+    "Transaction",
     {
       id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
       trip_code: { type: DataTypes.STRING(50), allowNull: false, unique: true },
       status: {
         type: DataTypes.ENUM({
-          name: 'transaction_status',
-          values: ['planning', 'payment', 'reporting', 'closed', 'canceled'],
+          name: "transaction_status",
+          values: ["planning", "payment", "reporting", "closed", "canceled"],
         }),
         allowNull: false,
-        defaultValue: 'planning',
+        defaultValue: "planning",
       },
       customer_name: { type: DataTypes.STRING(150), allowNull: false },
       customer_phone: { type: DataTypes.STRING(30) },
@@ -24,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
       duration_days: { type: DataTypes.INTEGER },
       total_cost: { type: DataTypes.DECIMAL(14, 2) },
       payment_plan_method: {
-        type: DataTypes.ENUM({ name: 'transaction_payment_plan_method', values: ['cash', 'credit'] }),
+        type: DataTypes.ENUM({ name: "transaction_payment_plan_method", values: ["cash", "credit"] }),
         allowNull: true,
       },
       paid_amount: {
@@ -40,25 +40,26 @@ module.exports = (sequelize, DataTypes) => {
       created_by: { type: DataTypes.BIGINT },
     },
     {
-      tableName: 'transactions',
+      tableName: "transactions",
       freezeTableName: true,
       timestamps: true,
-      createdAt: 'created_at',
-      updatedAt: 'updated_at',
+      createdAt: "created_at",
+      updatedAt: "updated_at",
       paranoid: true,
-      deletedAt: 'deleted_at',
+      deletedAt: "deleted_at",
     }
   );
 
   Transaction.associate = (models) => {
-    Transaction.belongsTo(models.Vehicle, { foreignKey: 'vehicle_id', as: 'vehicle' });
-    Transaction.belongsTo(models.Tariff, { foreignKey: 'tariff_id', as: 'tariff' });
-    Transaction.belongsTo(models.User, { foreignKey: 'created_by', as: 'creator' });
-    Transaction.hasMany(models.TransactionPayment, { foreignKey: 'transaction_id', as: 'payments' });
-    Transaction.hasMany(models.TransactionRefund, { foreignKey: 'transaction_id', as: 'refunds' });
-    Transaction.hasOne(models.TransactionReport, { foreignKey: 'transaction_id', as: 'report' });
-    Transaction.hasMany(models.ProfitShare, { foreignKey: 'transaction_id', as: 'profitShares' });
-    Transaction.hasMany(models.TransactionStatusLog, { foreignKey: 'transaction_id', as: 'statusLogs' });
+    Transaction.belongsTo(models.Vehicle, { foreignKey: "vehicle_id", as: "vehicle" });
+    Transaction.belongsTo(models.Tariff, { foreignKey: "tariff_id", as: "tariff" });
+    Transaction.belongsTo(models.User, { foreignKey: "created_by", as: "creator" });
+    Transaction.hasMany(models.TransactionPayment, { foreignKey: "transaction_id", as: "payments" });
+    Transaction.hasMany(models.TransactionRefund, { foreignKey: "transaction_id", as: "refunds" });
+    Transaction.hasOne(models.TransactionReport, { foreignKey: "transaction_id", as: "report" });
+    Transaction.hasMany(models.ProfitShare, { foreignKey: "transaction_id", as: "profitShares" });
+    Transaction.hasMany(models.TransactionStatusLog, { foreignKey: "transaction_id", as: "statusLogs" });
+    Transaction.hasOne(models.ProfitCache, { foreignKey: "transaction_id", as: "profit_cache" });
   };
 
   return Transaction;

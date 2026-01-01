@@ -14,6 +14,7 @@ const ownerRoute = require("@routes/v1/owners/ownerRoutes");
 const ownerWithdrawalRoute = require("@routes/v1/owners/ownerWithdrawalRoutes");
 const profitShareRoute = require("@routes/v1/profitShare/profitShareRoutes");
 const userRoute = require("@routes/v1/users/usersRoutes");
+const monthlyRoute = require("@routes/v1/monthlyReport/monthlyReportRoutes");
 
 // Daftarkan dengan prefix masing-masing
 router.use("/auth", authRoute);
@@ -29,5 +30,6 @@ router.use("/transactions/payments", transactionPaymentRoute);
 router.use("/transactions/refunds", transactionRefundRoute);
 router.use("/transactions/reports", transactionReportRoute);
 router.use("/transactions", transactionRoute);
+router.use("/monthly-report", monthlyRoute);
 
 module.exports = router;
