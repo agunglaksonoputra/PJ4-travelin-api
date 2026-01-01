@@ -1,6 +1,7 @@
 const createError = require("http-errors");
 const { TransactionReport, Transaction, sequelize } = require("@models");
 const { createActivityLog } = require("../activityLogs/activityLogsServices");
+const { recalculateMonthlyProfitByDate } = require("../monthlyProfit/monthlyProfitServices");
 const { createTransactionStatusLog } = require("./transactionsStatusLogsServices");
 const { updateProfitCache } = require("@services/v1/monthlyReport/monthlyReportServices");
 
@@ -93,6 +94,10 @@ exports.createTransactionReport = async ({ data, actorUserId, transaction: outer
       });
 
       await updateProfitCache(txRecord.id, { transaction });
+      await recalculateMonthlyProfitByDate({
+        date: new Date(), // atau txRecord.updated_at
+        transaction,
+      });
 
       await createActivityLog({
         actorUserId,

@@ -1,6 +1,6 @@
 const createError = require("http-errors");
 const { ProfitCache, Transaction, TransactionReport, TransactionPayment, Vehicle, sequelize } = require("@models");
-const { Sequelize } = require("sequelize");
+const { Op, Sequelize } = require("sequelize");
 
 const runInTransaction = async (outerTransaction, handler) => {
   if (outerTransaction) return handler(outerTransaction);
@@ -98,9 +98,14 @@ exports.getCashInSummary = async () => {
       [Sequelize.fn("SUM", Sequelize.col("paid_amount")), "total_cash_in"],
       [Sequelize.fn("COUNT", Sequelize.col("id")), "count"],
     ],
+    // where: {
+    //   status: {
+    //     [Sequelize.Op.not]: "closed", // NOT closed = deposit
+    //   },
+    // },
     where: {
       status: {
-        [Sequelize.Op.not]: "closed", // NOT closed = deposit
+        [Sequelize.Op.in]: ["payment"],
       },
     },
     group: [Sequelize.fn("DATE_TRUNC", "month", Sequelize.col("created_at"))],
@@ -206,11 +211,29 @@ exports.getMonthlyCashFlowDetail = async (year, month, { page = 1, limit = 10 } 
 
   // total transaksi bulan tsb
   const totalCount = await Transaction.count({
-    where: sequelize.where(sequelize.fn("to_char", sequelize.col("Transaction.created_at"), "YYYY-MM"), `${year}-${month}`),
+    where: {
+      [Op.and]: [
+        sequelize.where(sequelize.fn("to_char", sequelize.col("Transaction.created_at"), "YYYY-MM"), `${year}-${month}`),
+        {
+          status: {
+            [Op.in]: ["payment", "reporting", "closed"],
+          },
+        },
+      ],
+    },
   });
 
   const rows = await Transaction.findAll({
-    where: sequelize.where(sequelize.fn("to_char", sequelize.col("Transaction.created_at"), "YYYY-MM"), `${year}-${month}`),
+    where: {
+      [Op.and]: [
+        sequelize.where(sequelize.fn("to_char", sequelize.col("Transaction.created_at"), "YYYY-MM"), `${year}-${month}`),
+        {
+          status: {
+            [Op.in]: ["payment", "reporting", "closed"],
+          },
+        },
+      ],
+    },
     attributes: ["id", "trip_code", "customer_name", "customer_phone", "destination", "status", "paid_amount", "outstanding_amount", "start_date", "end_date", "created_at"],
     include: [
       {
@@ -232,7 +255,6 @@ exports.getMonthlyCashFlowDetail = async (year, month, { page = 1, limit = 10 } 
       {
         model: TransactionPayment,
         as: "payments",
-        // attributes: ["id", "amount", "method",],
         required: false,
       },
     ],
