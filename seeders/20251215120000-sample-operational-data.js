@@ -5,7 +5,7 @@ module.exports = {
     const now = new Date();
 
     await queryInterface.sequelize.transaction(async (transaction) => {
-      await queryInterface.bulkDelete("transaction_payments", { transaction_id: [301, 302, 303, 3001, 3002, 3003] }, { transaction });
+      await queryInterface.bulkDelete("transaction_payments", { transaction_id: [301, 302, 303, 3001, 3002, 3003, 3004] }, { transaction });
 
       await queryInterface.bulkDelete("transactions", { id: [301, 302, 303, 3001, 3002, 3003, 3004, 3005, 3006, 3007] }, { transaction });
 
@@ -141,6 +141,29 @@ module.exports = {
             updated_at: now,
             deleted_at: null,
           },
+          {
+            id: 3004,
+            trip_code: "TRIP-20260101-CL",
+            status: "closed",
+            customer_name: "PT Sukses Makmur",
+            customer_phone: "+628777888999",
+            vehicle_id: 1002,
+            tariff_id: 2002,
+            start_date: "2026-01-01",
+            end_date: "2026-01-03",
+            destination: "Yogyakarta",
+            notes: "Trip completed successfully without issues.",
+            price_per_day: "2400000.00",
+            duration_days: 3,
+            total_cost: "7200000.00",
+            payment_plan_method: "cash",
+            paid_amount: "7200000.00",
+            outstanding_amount: "0.00",
+            created_by: 1,
+            created_at: now,
+            updated_at: now,
+            deleted_at: null,
+          },
         ],
         { transaction }
       );
@@ -164,6 +187,36 @@ module.exports = {
             amount: "9600000.00",
             note: "Full payment received on booking.",
           },
+          {
+            id: 4003,
+            transaction_id: 3004,
+            paid_at: now,
+            method: "transfer",
+            amount: "7200000.00",
+            note: "Full payment for completed Yogyakarta trip.",
+          },
+        ],
+        { transaction }
+      );
+
+      await queryInterface.bulkInsert(
+        "transaction_reports",
+        [
+          {
+            id: 1,
+            transaction_id: 3004,
+            report_date: "2026-01-03",
+            driver_name: "Budi Santoso",
+            km_start: 12000,
+            km_end: 12850,
+            driver_fee: "900000.00",
+            gasoline_cost: "650000.00",
+            toll_cost: "300000.00",
+            parking_cost: "150000.00",
+            misc_cost: "100000.00",
+            notes: "No incident during trip.",
+            total_operational_cost: "2100000.00",
+          },
         ],
         { transaction }
       );
@@ -172,9 +225,9 @@ module.exports = {
 
   async down(queryInterface) {
     await queryInterface.sequelize.transaction(async (transaction) => {
-      await queryInterface.bulkDelete("transaction_payments", { id: [4001, 4002, 4003] }, { transaction });
+      await queryInterface.bulkDelete("transaction_payments", { id: [4001, 4002, 4003, 4004] }, { transaction });
 
-      await queryInterface.bulkDelete("transactions", { id: [3001, 3002, 3003] }, { transaction });
+      await queryInterface.bulkDelete("transactions", { id: [3001, 3002, 3003, 3004] }, { transaction });
 
       await queryInterface.bulkDelete("tariffs", { id: [2001, 2002] }, { transaction });
 

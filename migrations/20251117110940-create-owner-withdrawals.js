@@ -1,50 +1,76 @@
-'use strict';
+"use strict";
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  async up (queryInterface, Sequelize) {
+  async up(queryInterface, Sequelize) {
     await queryInterface.sequelize.transaction(async (t) => {
-      await queryInterface.createTable('owner_withdrawals', {
-        id: {
-          type: Sequelize.BIGINT,
-          primaryKey: true,
-          autoIncrement: true,
-          allowNull: false,
-        },
-        owner_id: {
-          type: Sequelize.BIGINT,
-          allowNull: false,
-          references: {
-            model: 'owners',
-            key: 'id',
+      await queryInterface.createTable(
+        "owner_withdrawals",
+        {
+          id: {
+            type: Sequelize.BIGINT,
+            primaryKey: true,
+            autoIncrement: true,
+            allowNull: false,
           },
-          onUpdate: 'CASCADE',
-          onDelete: 'RESTRICT',
+          owner_id: {
+            type: Sequelize.BIGINT,
+            allowNull: false,
+            references: {
+              model: "owners",
+              key: "id",
+            },
+            onUpdate: "CASCADE",
+            onDelete: "RESTRICT",
+          },
+          withdrawn_at: {
+            type: Sequelize.DATE,
+            allowNull: false,
+            defaultValue: Sequelize.fn("NOW"),
+          },
+          amount: {
+            type: Sequelize.DECIMAL(14, 2),
+            allowNull: false,
+          },
+          method: {
+            type: "payment_method",
+            allowNull: false,
+          },
+          status: {
+            type: Sequelize.ENUM({
+              name: "withdrawal_status",
+              values: ["completed", "refunded"],
+            }),
+            allowNull: false,
+            defaultValue: "completed",
+          },
+          note: {
+            type: Sequelize.TEXT,
+            allowNull: true,
+          },
+          created_at: {
+            type: Sequelize.DATE,
+            allowNull: false,
+            defaultValue: Sequelize.fn("NOW"),
+          },
+          updated_at: {
+            type: Sequelize.DATE,
+            allowNull: false,
+            defaultValue: Sequelize.fn("NOW"),
+          },
+          deleted_at: {
+            type: Sequelize.DATE,
+            allowNull: true,
+          },
         },
-        withdrawn_at: {
-          type: Sequelize.DATE,
-          allowNull: false,
-          defaultValue: Sequelize.fn('NOW'),
-        },
-        amount: {
-          type: Sequelize.DECIMAL(14, 2),
-          allowNull: false,
-        },
-        method: {
-          type: 'payment_method',
-          allowNull: false,
-        },
-        note: {
-          type: Sequelize.TEXT,
-          allowNull: true,
-        },
-      }, { transaction: t });
+        { transaction: t }
+      );
     });
   },
 
-  async down (queryInterface, Sequelize) {
+  async down(queryInterface, Sequelize) {
     await queryInterface.sequelize.transaction(async (t) => {
-      await queryInterface.dropTable('owner_withdrawals', { transaction: t });
+      await queryInterface.dropTable("owner_withdrawals", { transaction: t });
     });
-  }
+  },
 };
