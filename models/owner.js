@@ -1,25 +1,26 @@
 module.exports = (sequelize, DataTypes) => {
   const Owner = sequelize.define(
-    'Owner',
+    "Owner",
     {
       id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true },
       name: { type: DataTypes.STRING(150), allowNull: false },
       phone: { type: DataTypes.STRING(30) },
       shares_percentage: { type: DataTypes.DECIMAL(5, 2), allowNull: false, defaultValue: 0 },
       notes: { type: DataTypes.TEXT },
+      is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     },
     {
-      tableName: 'owners',
+      tableName: "owners",
       freezeTableName: true,
       timestamps: true,
-      createdAt: 'created_at',
-      updatedAt: 'updated_at',
+      createdAt: "created_at",
+      updatedAt: "updated_at",
     }
   );
 
   Owner.associate = (models) => {
-    Owner.hasMany(models.ProfitShare, { foreignKey: 'owner_id', as: 'profitShares' });
-    Owner.hasMany(models.OwnerWithdrawal, { foreignKey: 'owner_id', as: 'withdrawals' });
+    Owner.hasMany(models.ProfitShare, { foreignKey: "owner_id", as: "profitShares" });
+    Owner.hasMany(models.OwnerWithdrawal, { foreignKey: "owner_id", as: "withdrawals" });
   };
 
   return Owner;

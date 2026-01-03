@@ -207,6 +207,9 @@ exports.autoCalculateProfitShare = async ({ month, actorUserId, transaction: out
     // 2️⃣ Ambil owner
     const owners = await Owner.findAll({
       attributes: ["id", "shares_percentage"],
+      where: {
+        is_active: true,
+      },
       transaction: t,
     });
 
