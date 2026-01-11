@@ -1,4 +1,4 @@
-const { updateProfitCache, deleteProfitCache, getProfitSummary, getCashInSummary, getCashFlowSummary, getMonthlyCashFlowDetail } = require("@services/v1/monthlyReport/monthlyReportServices");
+const { updateProfitCache, deleteProfitCache, getProfitSummary, getCashInSummary, getCashFlowSummary, getMonthlyCashFlowDetail, getCurrentMonthProfit, getCashFlowDetailByTransactionId } = require("@services/v1/monthlyReport/monthlyReportServices");
 
 const getStatusCode = (error) => error.status || error.statusCode || 500;
 
@@ -124,6 +124,41 @@ exports.monthlyCashFlowDetail = async (req, res) => {
     });
   } catch (err) {
     res.status(getStatusCode(err)).json({
+      success: false,
+      error: err.message || "Terjadi kesalahan",
+    });
+  }
+};
+
+exports.getCurrentMonthProfit = async (req, res) => {
+  try {
+    const row = await getCurrentMonthProfit();
+
+    res.status(200).json({
+      success: true,
+      data: row,
+    });
+  } catch (err) {
+    const status = getStatusCode(err);
+    res.status(status).json({
+      success: false,
+      error: err.message || "Terjadi kesalahan",
+    });
+  }
+};
+
+exports.getCashFlowDetailByTransactionId = async (req, res) => {
+  const { transactionId } = req.params;
+
+  try {
+    const result = await getCashFlowDetailByTransactionId(transactionId);
+    res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (err) {
+    const status = getStatusCode(err);
+    res.status(status).json({
       success: false,
       error: err.message || "Terjadi kesalahan",
     });

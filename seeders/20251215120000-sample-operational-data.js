@@ -3,6 +3,7 @@
 module.exports = {
   async up(queryInterface) {
     const now = new Date();
+    const today = now.toISOString().split("T")[0];
 
     await queryInterface.sequelize.transaction(async (transaction) => {
       await queryInterface.bulkDelete("transaction_payments", { transaction_id: [301, 302, 303, 3001, 3002, 3003, 3004] }, { transaction });
@@ -174,26 +175,32 @@ module.exports = {
           {
             id: 4001,
             transaction_id: 3001,
-            paid_at: now,
+            paid_at: today,
             method: "transfer",
             amount: "1500000.00",
             note: "Initial down payment for Bandung trip.",
+            created_at: now,
+            updated_at: now,
           },
           {
             id: 4002,
             transaction_id: 3002,
-            paid_at: now,
+            paid_at: today,
             method: "cash",
             amount: "9600000.00",
             note: "Full payment received on booking.",
+            created_at: now,
+            updated_at: now,
           },
           {
             id: 4003,
             transaction_id: 3004,
-            paid_at: now,
+            paid_at: today,
             method: "transfer",
             amount: "7200000.00",
             note: "Full payment for completed Yogyakarta trip.",
+            created_at: now,
+            updated_at: now,
           },
         ],
         { transaction }
